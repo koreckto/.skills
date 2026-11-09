@@ -1,0 +1,7 @@
+[settings]
+lockfile = true
+
+[tools]
+markdownlint-cli2 = "latest"
+cspell            = "latest"
+tombi             = "latest"
