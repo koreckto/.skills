@@ -1,0 +1,17 @@
+{
+  "$schema": "https://raw.githubusercontent.com/DavidAnson/markdownlint-cli2/v0.23.2/schema/markdownlint-cli2-config-schema.json",
+  "gitignore": true,
+  "config": {
+    "MD003": {
+      "style": "atx"
+    },
+    "MD013": false,
+    "MD046": {
+      "style": "fenced"
+    }
+  },
+  "ignores": [
+    ".github/**",
+    "LICENSE"
+  ]
+}
