@@ -15,9 +15,9 @@ For an existing skill, read its `MAINTENANCE.md` first and follow its change imp
 
 Hard rules:
 
-- Write repository documentation in English, one line per paragraph or list item; do not hard-wrap prose.
+- Write repository documentation in English (except localized root `README.*.md` files), one line per paragraph or list item; do not hard-wrap prose.
 - The frontmatter `name` must match the skill directory name. Keep `SKILL.md` under 500 lines; move detail into `references/`.
-- Keep the root `README.md` row in sync with `metadata.version` and `description`.
+- Keep the root `README.md` and `README.zh-CN.md` skill tables in sync with `metadata.version` and `description`.
 - Update `CHANGELOG.md` and `metadata.version` together.
 - Do not put project-specific rules, secrets, or credentials in a skill.
 - After writing or changing a skill, validate that skill with `uvx --from skills-ref agentskills validate skills/<name>` and fix every reported problem before committing.
