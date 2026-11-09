@@ -6,10 +6,10 @@ This repository is a collection of shared Agent Skills. Each skill lives in `ski
 
 Read these before creating or changing a skill:
 
+- [Specification](https://agentskills.io/specification)
 - [Best practices for skill creators](https://agentskills.io/skill-creation/best-practices)
 - [Optimizing skill descriptions](https://agentskills.io/skill-creation/optimizing-descriptions)
 - [Using scripts in skills](https://agentskills.io/skill-creation/using-scripts)
-- [Specification](https://agentskills.io/specification)
 
 For an existing skill, read its `MAINTENANCE.md` first and follow its change impact map.
 
@@ -20,6 +20,7 @@ Hard rules:
 - Keep the root `README.md` row in sync with `metadata.version` and `description`.
 - Update `CHANGELOG.md` and `metadata.version` together.
 - Do not put project-specific rules, secrets, or credentials in a skill.
+- After writing or changing a skill, validate that skill with `uvx --from skills-ref agentskills validate skills/<name>` and fix every reported problem before committing.
 
 ## Checks
 

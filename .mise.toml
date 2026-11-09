@@ -2,6 +2,8 @@
 lockfile = true
 
 [tools]
+uv = "latest"
+
 markdownlint-cli2 = "latest"
 cspell            = "latest"
 tombi             = "latest"
