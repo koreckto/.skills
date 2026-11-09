@@ -12,6 +12,6 @@
   },
   "ignores": [
     ".github/**",
-    "LICENSE"
+    "**/LICENSE"
   ]
 }
