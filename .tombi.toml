@@ -1,0 +1,10 @@
+[format.rules]
+trailing-comment-alignment = true
+
+[[overrides]]
+[overrides.files]
+include = [".*.toml"]
+
+[overrides.format]
+enabled = true
+rules   = { key-value-equals-sign-alignment = true }
