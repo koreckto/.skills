@@ -171,6 +171,8 @@ Blank-line conventions inside function bodies are owned by [Style: formatting an
 
 - **SHOULD** replace a class that only holds static methods with module-level functions, unless a framework requires the class. (`Review`)
 
+Field documentation for public data models is owned by [Style: docstrings](style-rules.md#docstrings).
+
 **Integrated example.**
 
 ```python

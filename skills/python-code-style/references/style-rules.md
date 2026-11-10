@@ -135,7 +135,13 @@ from myapp.models import User
 
 - **SHOULD** use full words in public names. Acronyms are acceptable, written in lowercase in snake_case names (`http_client`). (`Review`)
 
-- **SHOULD** use a leading underscore for internal modules, functions, classes, and module-level variables. (`Review`)
+- **SHOULD** use a leading underscore for internal packages, modules, functions, classes, methods, and module-level variables. (`Review`)
+
+- **SHOULD** determine internal visibility from the symbol's defining boundary: packages without public APIs or cross-package consumers, modules used only in one package, functions, classes, and module globals used only in one module, methods used only in one class, and nested helpers used only in one enclosing function. (`Review`)
+
+- **SHOULD** treat names required by public exports, public type signatures, protocols, or name-based framework dispatch as external contracts rather than internal symbols. (`Review`)
+
+- **SHOULD** treat callbacks registered or passed only by object reference as internal to their defining boundary when their Python names are not external contracts. (`Review`)
 
 - **SHOULD NOT** shadow Python builtins. (`Ruff: A`)
 
@@ -154,6 +160,14 @@ from myapp.models import User
 def fetch_user(user_id: str, *, include_inactive: bool = False) -> User:
     timeout_seconds = 30
     ...
+
+
+# Good: the registry key is public, but the callback name is internal.
+def _sync_user() -> None:
+    ...
+
+
+callbacks = {"sync-user": _sync_user}
 
 
 # Bad: mixed vocabulary, negative boolean, unitless timeout
@@ -176,7 +190,7 @@ def load_account(account_id: str, *, no_cache: bool = False) -> User:
 
 - **SHOULD** use two blank lines between top-level definitions and one blank line between methods. (`Review`)
 
-- **SHOULD** use a single blank line between major phases in a long function body (roughly 20 lines or more). Keep short functions compact. (`Review`)
+- **SHOULD** use a single blank line between major phases in a long function body (roughly 20 lines or more). Keep short functions compact. Treat a single call or data structure spanning multiple lines as one phase. (`Review`)
 
   ```python
   # Good: phases separated by a single blank line
@@ -217,7 +231,7 @@ The template does not set `line-length`, so Ruff's default of 88 applies. A proj
 
 ## Docstrings
 
-**Applies to.** Public modules, classes, functions, methods, and data-class fields.
+**Applies to.** Public modules, classes, functions, methods, and the public fields of public data models (`@dataclass`, `TypedDict`, `NamedTuple`, or a framework model class with declarative fields). A model is public when it is part of the package's public API under [Naming](#naming). A field is public when its name does not begin with `_` and it is not a `ClassVar`, `model_config`, or another framework configuration attribute.
 
 **Verified by.** `Ruff: D`; `D104`, `D105`, `D107`, and `D415` are ignored; `D417` checks only docstrings with an `Args` section; the rest is `Review`.
 
@@ -225,15 +239,21 @@ The template does not set `line-length`, so Ruff's default of 88 applies. A proj
 
 - **SHOULD** document public modules, classes, functions, and methods. (`Ruff: D`)
 
+- **SHOULD** include every applicable `Args`, `Returns`, `Yields`, and `Raises` section in public function and method docstrings. (`Review`)
+
 - **SHOULD** use a one-line summary, a blank line, and then sections in order: `Args`, `Returns`, `Yields`, `Raises`, `Attributes`. (`Review`)
 
 - **SHOULD** list parameters in signature order as `name (type, optional):` and state defaults in the description. (`Review`)
 
 - **SHOULD** use `name (type):` for `Attributes`, and omit the type when the annotation is adjacent. (`Review`)
 
-- **SHOULD** use `Yields` for generators and omit `Returns` when returning `None`. For `Returns`, `Yields`, and `Raises`, put the type on the first line and indent the description below it. (`Review`)
+- **SHOULD** use `Yields` for generators and omit `Returns` when returning `None`. (`Review`)
 
-- **SHOULD** document data-class fields next to their definition for `@dataclass` where the project's tooling reads per-field docstrings; use an `Attributes:` section otherwise. Keep one style per project. (`Review`)
+- **SHOULD** place each argument, return, yield, exception, and attribute description on a separate line below its declaration, indented one level; continuation lines use the same indentation. (`Review`)
+
+- **SHOULD** document every public field of a public data model; a class summary alone does not document its fields. (`Review`)
+
+- **SHOULD** use a per-field docstring, an `Attributes:` section, or the framework's native field description for framework models such as Pydantic. Keep one style per project. (`Review`)
 
 - **SHOULD** use either imperative mood or declarative sentences consistently across the project, and end sentences with punctuation in the document's language. Keep section headers in English. (`Review`)
 
@@ -265,7 +285,7 @@ def fetch_users(query: str, *, limit: int = 100) -> list[User]:
     """
 ```
 
-**Exceptions.** Internal helpers may use a concise summary. Package docstrings, magic methods, and `__init__` are exempt from the docstring-presence rule.
+**Exceptions.** Functions and methods whose names begin with `_` may use a summary-only docstring. A function or method defined in an internal module may also use a summary-only docstring, even when its name has no leading underscore. A module is internal when it is outside the package's public API as defined in [Naming](#naming), for example because its name begins with `_` or it is imported only within its own package. Package docstrings, magic methods, and `__init__` are exempt from the docstring-presence rule.
 
 ## Comments
 

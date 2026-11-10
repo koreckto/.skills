@@ -167,7 +167,7 @@ ban-relative-imports = "all"  # or "parents"
 
 `N818` is enabled individually; the rest of the `N` family is not. `N806` would conflict with local `UPPER_SNAKE_CASE` constants. `N818` requires custom `Exception` subclasses to end with `Error`; it does not check `BaseException` or `Warning` subclasses. A non-error control-flow exception may suppress `N818` with a reason.
 
-The semantic naming conventions carry `Review` in [Style: naming](style-rules.md#naming).
+The semantic naming conventions carry `Review` in [Style: naming](style-rules.md#naming). This includes defining-boundary analysis for internal symbols and distinguishing object-reference callbacks from names required by an external contract.
 
 ## Typing
 
@@ -191,7 +191,9 @@ convention = "google"
 
 `D104`, `D105`, `D107`, and `D415` are ignored globally. `D415` is ignored because it accepts only ASCII `.`, `?`, and `!`; non-English punctuation such as `。` or `？` would fail. Terminal punctuation is `Review`. `D400` and `D401` are disabled by the Google convention, so declarative first lines are allowed.
 
-`D417` checks completeness only when a docstring contains an `Args` section, and it recognizes the English header. Keep section headers in English. Attribute docstrings are not checked by Ruff; per-field docs are preferred for `@dataclass` where tooling reads them, while `Attributes:` is the portable fallback for all three data-class types. Keep one style per project.
+`D417` checks completeness only when a docstring contains an `Args` section, and it recognizes the English header. Keep section headers in English. Attribute docstrings are not checked by Ruff; documenting every public field of a public data model is `Review`. Use a per-field docstring, an `Attributes:` section, or the framework's native field description. Keep one style per project.
+
+Ruff does not enforce separate-line indentation for argument, return, yield, exception, or attribute descriptions; that layout is `Review`. Requiring every applicable section for public functions and methods, reserving summary-only docstrings for `_` names and functions in internal modules, and documenting public model fields are also `Review`.
 
 Docstring content language is determined by the project, not by this configuration.
 

@@ -5,7 +5,7 @@ compatibility: Requires Python 3.11+ and Ruff. uv is recommended.
 license: MIT
 metadata:
   author: Koreckto
-  version: "1.0.0"
+  version: "1.1.0"
 ---
 
 # Python Code Style
@@ -174,6 +174,7 @@ A project may define its own Python rules in `AGENTS.md`, `CONTRIBUTING.md`, a d
 - `TC004` catches direct runtime uses such as `isinstance`, base classes, and decorators. It does not catch `get_type_hints`, `get_overloads`, or framework annotation resolution; keep those imports at runtime manually.
 - `D415` is ignored because it accepts only ASCII `.`, `?`, and `!`. Terminal punctuation in non-English docstrings is `Review`.
 - `D417` checks only docstrings that contain an `Args` section. A public function without one can still be under-documented.
+- Ruff does not enforce the internal-module docstring exception or public model field documentation; both are `Review`.
 - `PT009` and `PT027` are ignored globally so unittest-style assertions remain valid. A pytest project can re-enable them.
 - `FBT001` and `FBT002` check definitions only. `FBT003` is not enabled, so a positional boolean at a call site is `Review`.
 
@@ -192,7 +193,7 @@ Before finishing a coding task:
 - [ ] No secrets, credentials, tokens, or personal data appear in code, tests, examples, docs, logs, or exception messages.
 - [ ] Async code has no blocking calls, and cancellation is not swallowed.
 - [ ] Datetimes are timezone-aware; text I/O specifies `encoding=` below 3.15.
-- [ ] Public APIs have Google-style docstrings and complete annotations, or a recorded reason.
+- [ ] Public APIs have Google-style docstrings and complete annotations, and public model fields are documented, or a recorded reason.
 - [ ] Tests cover the changed behavior and are isolated.
 - [ ] Naming, functions, data, exceptions, and security follow the references.
 - [ ] Syntax and APIs match the declared minimum Python version, and tests pass on the available supported Python versions.
