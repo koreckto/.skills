@@ -16,7 +16,7 @@ Shared defaults for writing and reviewing Python code. The skill covers general 
 
 The skill owns:
 
-- Layout, imports, exports, naming, formatting, docstrings, comments, and code examples.
+- Internal and public object terminology, layout, imports, exports, naming, formatting, docstrings, comments, and code examples.
 - Typing, data modeling, functions, pattern matching, comprehensions, async code, exceptions, date, time, and I/O handling, path handling, testing, security, logging, performance, and suppressions.
 - Ruff configuration and Python version compatibility for the shared rule set.
 
@@ -76,7 +76,8 @@ This list is a navigation aid. The normative rules and their verification tags l
 - Never use a mutable default, a call in a default, or mutable class-level state without `ClassVar`; bind loop variables captured by a closure. See [Functions and parameters](references/language-rules.md#functions-and-parameters), [Type annotations](references/language-rules.md#type-annotations).
 - Never block the event loop; never swallow `CancelledError`; release async resources. See [Async and concurrency](references/language-rules.md#async-and-concurrency).
 - Use timezone-aware datetimes; pass `strict=` to a multi-iterable `zip()`; pass `encoding=` for text I/O below 3.15. See [Date, time, and I/O](references/language-rules.md#date-time-and-io), [Comprehensions and iteration](references/language-rules.md#comprehensions-and-iteration).
-- Validate external input at the boundary; keep import time free of I/O and global mutation. Keep runtime imports at runtime, and quote forward references that are not defined when the annotation is evaluated (or omit quotes on 3.14+ where PEP 649 defers evaluation). See [Data modeling](references/language-rules.md#data-modeling), [Style: module and package layout](references/style-rules.md#module-and-package-layout), [Type annotations](references/language-rules.md#type-annotations).
+- Validate external input at the boundary; keep import time free of I/O and global mutation. Keep runtime imports at runtime, and quote forward references that are not defined when the annotation is evaluated (or omit quotes on 3.14+ where PEP 649 defers evaluation). See [Data modeling](references/language-rules.md#data-modeling), [Module and package layout](references/style-rules.md#module-and-package-layout), [Type annotations](references/language-rules.md#type-annotations).
+- Keep first-party package imports one-way: inside a target package, import the defining module; outside, use the target package's `__init__.py` re-export unless the object is public relative to the importing module. See [Public API and exports](references/style-rules.md#public-api-and-exports).
 - Keep an externally supplied path under its base directory; resolve both the base and the candidate before `is_relative_to()`. See [Paths](references/language-rules.md#paths), [Security and logging](references/language-rules.md#security-and-logging).
 - Keep tests isolated from network, real time, unseeded randomness, and execution order. See [Testing](references/language-rules.md#testing).
 - Give every suppression a code and a reason; never suppress a security rule without a security review. See [Suppressions](references/language-rules.md#suppressions).
@@ -98,6 +99,7 @@ A lower priority never justifies a MUST violation. If a project rule weakens a M
 
 | Task | Read |
 | --- | --- |
+| Internal and public object terminology | [Style: terms](references/style-rules.md#terms-internal-and-public-objects) |
 | Layout, imports, exports | [Style: module and package layout](references/style-rules.md#module-and-package-layout), [Style: imports](references/style-rules.md#imports), [Style: exports](references/style-rules.md#public-api-and-exports) |
 | Naming | [Style: naming](references/style-rules.md#naming) |
 | Formatting and line structure | [Style: formatting and line structure](references/style-rules.md#formatting-and-line-structure) |
@@ -176,9 +178,10 @@ A project may define its own Python rules in `AGENTS.md`, `CONTRIBUTING.md`, a d
 - `TRY003` is ignored on purpose: it rejects multi-word messages at the raise site. Keep exception messages at the raise site.
 - `UP040`, `UP046`, and `UP047` only fire at a 3.12+ target. On 3.11, use `TypeVar`, `Generic`, and `TypeAlias`.
 - `TC004` catches direct runtime uses such as `isinstance`, base classes, and decorators. It does not catch `get_type_hints`, `get_overloads`, or framework annotation resolution; keep those imports at runtime manually.
+- Ruff checks import order and placement, not package-boundary direction; whether an import uses a target-package facade or a public object is `Review`.
 - `D415` is ignored because it accepts only ASCII `.`, `?`, and `!`. Terminal punctuation in non-English docstrings is `Review`.
 - `D417` checks only docstrings that contain an `Args` section. A public function without one can still be under-documented.
-- Ruff does not enforce the internal-module docstring exception or public model field documentation; both are `Review`.
+- Ruff does not enforce the summary-only docstring exception for internal objects and internal modules, or public model field documentation; all are `Review`.
 - `PT009` and `PT027` are ignored globally so unittest-style assertions remain valid. A pytest project can re-enable them.
 - `FBT001` and `FBT002` check definitions only. `FBT003` is not enabled, so a positional boolean at a call site is `Review`.
 
@@ -198,7 +201,8 @@ Before finishing a coding task:
 - [ ] Async code has no blocking calls, and cancellation is not swallowed.
 - [ ] Datetimes are timezone-aware; text I/O specifies `encoding=` below 3.15.
 - [ ] Paths expand `~` at the input boundary; canonical checks use `resolve()`, and externally supplied paths are contained.
-- [ ] Public APIs have Google-style docstrings and complete annotations, and public model fields are documented, or a recorded reason.
+- [ ] Public APIs have Google-style docstrings, complete annotations, and documented model fields, or a recorded reason.
+- [ ] Package imports follow the target-package boundary: inside, import the defining module; outside, use the target package's `__init__.py` re-export unless the object is public relative to the importing module.
 - [ ] Tests cover the changed behavior and are isolated.
 - [ ] Naming, functions, data, exceptions, and security follow the references.
 - [ ] Syntax and APIs match the declared minimum Python version, and tests pass on the available supported Python versions.
@@ -207,7 +211,7 @@ Before finishing a coding task:
 
 | File | Contents | Read when |
 | --- | --- | --- |
-| [`style-rules.md`](references/style-rules.md) | layout, imports, exports, naming, formatting, docstrings, comments, code examples | writing or reviewing code |
+| [`style-rules.md`](references/style-rules.md) | terms, layout, imports, exports, naming, formatting, docstrings, comments, code examples | writing or reviewing code |
 | [`language-rules.md`](references/language-rules.md) | typing, data modeling, functions, pattern matching, comprehensions, async, exceptions, date and time, I/O, paths, testing, security, performance, suppressions | writing or reviewing code |
 | [`ruff-config.md`](references/ruff-config.md) | rule set map, target version, per-file ignores, banned API, formatter | configuring or troubleshooting Ruff |
 | [`version-compatibility.md`](references/version-compatibility.md) | support matrix, minimum-version detection, compatibility patterns, end of life | choosing syntax or APIs, or setting the minimum Python version |

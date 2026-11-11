@@ -14,6 +14,7 @@ Read this table before editing. It lists the files that usually need a matching 
 | --- | --- |
 | `SKILL.md` routing table | The matching reference headings and anchors |
 | A rule in `references/style-rules.md` | `references/ruff-config.md` rule set map; the section's example; `CHANGELOG.md` |
+| The Terms definitions in `references/style-rules.md` | Every rule that uses the internal or public object terms; `CHANGELOG.md` |
 | A rule in `references/language-rules.md` | `references/ruff-config.md` rule set map; the section's example; `CHANGELOG.md` |
 | A section heading in a reference | `SKILL.md` routing link; every cross-link to that anchor |
 | Section order or category headings in a reference | `SKILL.md` References table; [Document map](#document-map); [Where a rule goes](#where-a-rule-goes); `CHANGELOG.md` |
@@ -24,8 +25,8 @@ Read this table before editing. It lists the files that usually need a matching 
 | `SKILL.md` description | Manual trigger check with the prompts in [Description and triggering](#description-and-triggering) |
 | A rule level change | The unreleased `CHANGELOG.md` entry (next release is major); the verification tag and `ruff-config.md` mapping |
 | A new code example | The rule bullet's example block; the manual example check in [Code examples](#code-examples); `CHANGELOG.md` |
-| A section-level integrated example | Only when it shows several rules; label it `Integrated example`. |
-| `README.md` skill index | The skill's `SKILL.md` path, version, and one-line description |
+| A section-level integrated example | The owning section's rules; the manual example check in [Code examples](#code-examples); `CHANGELOG.md` |
+| Root `README.md` and `README.zh-CN.md` skill tables | The skill's `SKILL.md` path, version, and one-line description |
 | `metadata.version` | `CHANGELOG.md`; the release heading and date; the annotated tag `skills/python-code-style/v<version>` |
 | A new technical term in Markdown | `.cspell.jsonc` `words`, only when `cspell` flags it |
 
@@ -34,7 +35,7 @@ Read this table before editing. It lists the files that usually need a matching 
 | File | Audience | Owns |
 | --- | --- | --- |
 | `SKILL.md` | agent | routing, workflow, levels, verification tags, non-negotiables, priorities, task validation |
-| `references/style-rules.md` | agent | layout, imports, exports, naming, formatting, docstrings, comments, code examples |
+| `references/style-rules.md` | agent | terms, layout, imports, exports, naming, formatting, docstrings, comments, code examples |
 | `references/language-rules.md` | agent | typing, data modeling, functions, pattern matching, comprehensions, async, exceptions, date and time, I/O, paths, testing, security, performance, suppressions |
 | `references/ruff-config.md` | agent and maintainer | Ruff configuration, rule set map, ignores, formatter, adoption |
 | `references/version-compatibility.md` | agent and maintainer | supported versions, minimum-version detection, feature matrix, EOL |
@@ -46,12 +47,14 @@ Read this table before editing. It lists the files that usually need a matching 
 
 | The rule is about | Owning file |
 | --- | --- |
-| Module layout, imports, exports, naming, formatting, docstrings, comments, code examples | `references/style-rules.md` |
+| Terms, module layout, imports, exports, naming, formatting, docstrings, comments, code examples | `references/style-rules.md` |
 | Typing, data modeling, functions, pattern matching, comprehensions, async, exceptions, date and time, I/O, path handling, tests, security, logging, performance, suppressions | `references/language-rules.md` |
 | Ruff configuration, rule codes, ignores, formatter, adoption | `references/ruff-config.md` |
 | Supported versions, feature availability, compatibility patterns, EOL | `references/version-compatibility.md` |
 
 Each rule has one owning section. Other documents link to it; they do not restate it. When a rule spans two concerns, split it and put each part in the section that owns it.
+
+The [Terms](references/style-rules.md#terms-internal-and-public-objects) definitions apply across the skill; link to them instead of restating the internal and public object definitions.
 
 Within each reference, sections are grouped under category headings that follow the writing workflow. Place a new section under the heading whose scope matches; add a new heading only when no existing heading fits.
 
@@ -100,16 +103,15 @@ Add a section first. Split a reference into a new file only when it exceeds roug
 When adding a section:
 
 1. Add the heading to the reference under the matching category heading.
-2. Add `**Applies to.**` and `**Verified by.**` lines.
-3. Add a routing row in [SKILL.md](SKILL.md#routing) if the section is a new task entry point.
-4. Add cross-links from related sections instead of duplicating the rule.
+2. Add a routing row in [SKILL.md](SKILL.md#routing) if the section is a new task entry point.
+3. Add cross-links from related sections instead of duplicating the rule.
 
 When adding a reference:
 
 1. Create the file under `references/`.
 2. Add it to the `SKILL.md` routing table and References table.
 3. Add a concise scope summary under the title.
-4. Update `README.md` if the skill index exposes the file.
+4. Update `README.md` and `README.zh-CN.md` if the skill tables expose the file.
 5. Search for every anchor that moved and update it.
 
 Keep anchors stable. If a heading must change, update every link in the same change.
@@ -147,7 +149,7 @@ Do not describe a version as supported until it is in the table and the feature 
 A new tool needs a home and a reason. Keep `references/ruff-config.md` focused on Ruff.
 
 1. Decide whether the tool belongs in an existing reference or needs a new one.
-2. Add a section with `Applies to`, `Verified by`, and rules.
+2. Add a section with its rules and verification tags.
 3. Add a routing row in `SKILL.md`.
 4. Add the check command to the [Release checklist](#release-checklist) if the repository should run it.
 5. Add the tool to the `compatibility` frontmatter if it is required at runtime.
@@ -159,7 +161,8 @@ A tool that only produces warnings cannot be the sole verification for a `MUST`.
 
 Examples are part of the standard. Review them manually before release:
 
-- Multi-line examples are attached to the rule bullet they illustrate. A section-level block is used only for a multi-rule flow and labeled `Integrated example`. Do not repeat the same example at both levels.
+- Multi-line examples are attached to the rule bullet they illustrate. A section-level block is used for a coherent multi-rule unit (a module, class, function, import block, or good/bad pair) and labeled `Integrated example`. Do not repeat the same example at both levels.
+- Independent snippets belong under the rule bullets they illustrate; do not label a catalog of snippets `Integrated example`.
 - Every fenced block has a language tag. `markdownlint` MD040 checks this.
 - A `python` fence is valid Python on the skill's minimum version (3.11), or carries a `# Python 3.x+` marker with the 3.11-compatible alternative nearby.
 - A `text` fence is used for pseudo-code, intentionally invalid code, or output.
@@ -211,12 +214,13 @@ Before releasing a skill change:
 - [ ] Every selected Ruff family maps to a rule section or an intentional ignore in `references/ruff-config.md`.
 - [ ] No rule is duplicated across sections or files.
 - [ ] The frontmatter `name` matches the directory name.
-- [ ] `metadata.version`, the latest `CHANGELOG.md` heading and date, and the root README version match.
+- [ ] `metadata.version`, the latest `CHANGELOG.md` heading and date, and the root `README.md` and `README.zh-CN.md` skill tables match.
 - [ ] The version matrix has a current verification date.
 - [ ] The description was checked against the three should-trigger and three should-not-trigger prompts.
-- [ ] Every multi-line example is attached to its rule or labeled `Integrated example`; no example is duplicated at both levels.
+- [ ] Every multi-line example is attached to its rule or is a coherent section-level example labeled `Integrated example`; no example is duplicated at both levels.
+- [ ] Every section-level example shares one context; independent snippets are attached to their rules.
 - [ ] Code examples have language tags, Python 3.11-compatible syntax (or a `# Python 3.x+` marker), and no realistic secrets.
-- [ ] `README.md` lists the skill, version, and description.
+- [ ] `README.md` and `README.zh-CN.md` list the skill, version, and description.
 - [ ] No project-specific rule was written into the skill directory.
 - [ ] `git diff --check` reports no whitespace errors.
 - [ ] Create the annotated tag `skills/python-code-style/v<version>` on the release commit; without it, the version remains unreleased.

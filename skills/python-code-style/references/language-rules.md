@@ -6,15 +6,13 @@ Typing, data modeling, functions, pattern matching, comprehensions, async code, 
 
 ### Type annotations
 
-**Applies to.** Function signatures, class attributes, containers, generics, type aliases, and typing-only imports.
-
-**Verified by.** `Ruff: ANN, ANN401, UP006, UP007, UP035, UP040, UP045, UP046, UP047, TC001–TC004, TID251, RUF012`; the rest is `Review`.
-
 - **MUST** annotate mutable class-level state with `ClassVar[T]`, for example `items: ClassVar[list[str]] = []`. (`Ruff: RUF012`)
 
 - **MUST** keep imports used at runtime outside `TYPE_CHECKING`, including base classes, `isinstance` checks, decorators, and framework annotations resolved at runtime. (`Ruff: TC004`; `Review`)
 
-- **MUST** quote forward references and types imported under `TYPE_CHECKING` on Python 3.11–3.13, and for definition-time evaluations across all versions. On Python 3.14+, omit quotes where PEP 649 defers evaluation natively. (`Review`)
+- **MUST** quote forward references and types imported under `TYPE_CHECKING` on Python 3.11–3.13, and for definition-time evaluations across all versions. (`Review`)
+
+- **MUST** keep a runtime definition for every `@runtime_checkable` Protocol method; `isinstance()` checks only member presence, so a method defined only inside `TYPE_CHECKING` makes every object pass. (`Review`)
 
 - **MUST NOT** use `from __future__ import annotations`. Quote forward references instead. (`Ruff: TID251`)
 
@@ -25,6 +23,8 @@ Typing, data modeling, functions, pattern matching, comprehensions, async code, 
 - **SHOULD** move typing-only imports behind `if TYPE_CHECKING:`. (`Ruff: TC001, TC002, TC003`)
 
 - **SHOULD** use PEP 695 generics and `type` aliases when the minimum Python version is 3.12 or newer; see the [feature matrix](version-compatibility.md#feature-matrix). (`Ruff: UP040, UP046, UP047`; `Since: 3.12`)
+
+- **SHOULD** omit quotes around annotations on Python 3.14+ where PEP 649 defers evaluation natively, except for expressions evaluated at definition time. (`Ruff: UP037`; `Review`; `Since: 3.14`)
 
 - **SHOULD** create a type alias when the name adds domain meaning that the underlying type does not convey, even when the underlying type is short, or when the type expression is long, nested, repeated, or recursive. (`Review`)
 
@@ -37,9 +37,7 @@ Typing, data modeling, functions, pattern matching, comprehensions, async code, 
   type String = str
   ```
 
-- **SHOULD NOT** create a short, single-use type alias that only restates the underlying type without adding domain meaning, or use an alias to simulate a distinct type; use `NewType` or a class when the distinction must be enforced. (`Review`)
-
-- **SHOULD** wrap a union annotation that does not fit on one line in parentheses with one member per line. (`Review`)
+- **SHOULD** wrap a union annotation that does not fit on one line in parentheses, and format it with one member per line when the union itself spans multiple lines. (`Format: ruff format`; `Review`)
 
   ```python
   from collections.abc import Iterable, Mapping, Sequence
@@ -65,7 +63,7 @@ Typing, data modeling, functions, pattern matching, comprehensions, async code, 
   ) -> dict[str, object]: ...
   ```
 
-- **SHOULD** annotate class attributes and empty-container initializations (`items: list[str] = []`). (`Review`)
+- **SHOULD** annotate class attributes and local empty-container initializations (`items: list[str] = []`). (`Review`)
 
 - **SHOULD** use `Final[T]` for constants that must not be rebound, for example `MAX_RETRIES: Final = 3`. (`Review`)
 
@@ -73,7 +71,9 @@ Typing, data modeling, functions, pattern matching, comprehensions, async code, 
 
 - **SHOULD** use `typing_extensions` only when the minimum Python version lacks the feature. Do not use it for features already available in the minimum version. (`Review`)
 
-- **SHOULD** keep `@overload` signatures where the runtime needs them; move typing-only overloads behind `TYPE_CHECKING`. (`Review`)
+- **SHOULD** move typing-only overloads behind `TYPE_CHECKING`, except when code reads them with `typing.get_overloads()`. (`Review`)
+
+- **SHOULD NOT** create a short, single-use type alias that only restates the underlying type without adding domain meaning, or use an alias to simulate a distinct type; use `NewType` or a class when the distinction must be enforced. (`Review`)
 
 - **SHOULD NOT** use `Any` in function signatures. Use `object` when any value is acceptable or a `Protocol` when behavior is expected. (`Ruff: ANN401`)
 
@@ -106,7 +106,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from collections.abc import Iterable
 
-    from myapp.models import User
+    from myapp.models.user import User
 
 
 def first_user(users: "Iterable[User]") -> "User | None":
@@ -117,10 +117,6 @@ def first_user(users: "Iterable[User]") -> "User | None":
 **Exceptions.** A framework that resolves annotations at runtime may need a runtime import. Keep the import outside `TYPE_CHECKING` and document the framework behavior. On 3.11, use `TypeVar`, `Generic`, and `TypeAlias` instead of PEP 695 syntax.
 
 ### Data modeling
-
-**Applies to.** Structured values, immutability, validation, and enums.
-
-**Verified by.** `Review`. Datetime construction is owned by [Date, time, and I/O](#date-time-and-io); mutable class state is owned by [Type annotations](#type-annotations).
 
 - **MUST** validate external input once at the boundary, then pass typed data through the rest of the code. (`Review`)
 
@@ -136,7 +132,7 @@ def first_user(users: "Iterable[User]") -> "User | None":
 
 - **SHOULD** replace a class that only holds static methods with module-level functions, unless a framework requires the class. (`Review`)
 
-Field documentation for public data models is owned by [Style: docstrings](style-rules.md#docstrings).
+Datetime construction is owned by [Date, time, and I/O](#date-time-and-io); mutable class state is owned by [Type annotations](#type-annotations); field documentation for public data models is owned by [Style: docstrings](style-rules.md#docstrings).
 
 **Integrated example.**
 
@@ -169,10 +165,6 @@ class RetryPolicy:
 ## Write the logic
 
 ### Functions and parameters
-
-**Applies to.** Function design, parameter lists, default values, complexity, and closure behavior.
-
-**Verified by.** `Ruff: ARG, B006, B008, B023, C90, FBT001, FBT002, PLW0603, RET505–RET508`; the rest is `Review`.
 
 - **MUST** bind loop variables explicitly when a closure captures them. (`Ruff: B023`)
 
@@ -246,11 +238,16 @@ Blank-line conventions inside function bodies are owned by [Style: formatting an
 
 ### Pattern matching
 
-**Applies to.** `match` statements, multi-branch dispatch, and destructuring of structured values.
-
-**Verified by.** `Review`.
-
 `match` has been available since Python 3.10, so it is available at every version this skill supports (3.11+).
+
+- **MUST NOT** use a bare name as a `case` pattern to compare against a constant. A bare name is a capture pattern and matches every value; use a literal, a dotted name such as `Color.RED`, an enum member, or a guard. (`Review`)
+
+  ```python
+  # Bad: ENTER is a capture pattern, so this case matches every key
+  match event:
+      case KeyPress(key=ENTER):
+          submit()
+  ```
 
 - **SHOULD** use `match` and `case` patterns instead of an `if`/`elif` chain when a branch depends on the shape of a value: its type, attributes, container elements, or several related values at once. (`Review`)
 
@@ -258,19 +255,21 @@ Blank-line conventions inside function bodies are owned by [Style: formatting an
 
 - **SHOULD NOT** use `match` for a single condition, a boolean expression, a range check, or a chain that compares one variable with literals; `if`/`elif` is clearer there. (`Review`)
 
-- **MUST NOT** use a bare name as a `case` pattern to compare against a constant. A bare name is a capture pattern and matches every value; use a literal, a dotted name such as `Color.RED`, an enum member, or a guard. (`Review`)
+**Integrated example.**
 
 ```python
-# Good: one match dispatches on the shape and binds the fields
+# Good: match dispatches on shape, matches a dotted constant, and uses a guard
 match event:
     case Click(x=x, y=y):
         handle_click(x, y)
-    case KeyPress(key=key):
+    case KeyPress(key=Key.ENTER):
+        submit()
+    case KeyPress(key=key) if len(key) == 1:
         handle_key(key)
     case _:
         raise TypeError(type(event))
 
-# Bad: the isinstance chain repeats the same extraction
+# Bad: isinstance chain handles ENTER as an ordinary key and repeats extraction
 if isinstance(event, Click):
     handle_click(event.x, event.y)
 elif isinstance(event, KeyPress):
@@ -281,19 +280,35 @@ else:
 
 ### Comprehensions and iteration
 
-**Applies to.** List, set, and dict comprehensions, generator expressions, nested loops, and `zip`.
-
-**Verified by.** `Ruff: C4, FURB, B905`; the rest is `Review`.
-
 - **MUST** pass `strict=` to `zip()` when it is called with two or more iterables or a starred argument. (`Ruff: B905`)
 
 - **SHOULD** fix mechanical comprehension and iteration simplifications reported by `C4` and `FURB`. (`Ruff: C4, FURB`)
 
 - **SHOULD** keep a comprehension to one `for` and at most one `if`. (`Review`)
 
+  ```python
+  # Bad: two filters exceed the one-if budget
+  admins = [u.name for u in users if u.is_active if u.is_admin]
+  ```
+
 - **SHOULD** allow a second `for` only to flatten a two-dimensional structure. (`Review`)
 
+  ```python
+  # Good: the second for flattens a two-dimensional structure
+  flat_matrix = [cell for row in matrix for cell in row]
+  ```
+
 - **SHOULD** use `itertools.product` for a parallel Cartesian product, and an explicit loop for a dependent nested loop or multi-step logic. (`Review`)
+
+  ```python
+  import itertools
+
+  # Good: parallel Cartesian product
+  coords = [f(x, y) for x, y in itertools.product(xs, ys)]
+
+  # Bad: the inner loop depends on the outer loop; use an explicit loop
+  names = [u.name for g in groups if g.is_active for u in g.users]
+  ```
 
 - **SHOULD** remember that `itertools.product` materializes its inputs. Keep a nested generator for large or infinite streams when streaming matters, and state why. (`Review`)
 
@@ -301,30 +316,11 @@ else:
 
 - **MAY** use a comprehension for a simple transformation or filter. (`Review`)
 
-**Integrated example.**
-
-```python
-import itertools
-
-# Good: flatten a two-dimensional structure
-flat_matrix = [cell for row in matrix for cell in row]
-
-# Good: parallel Cartesian product
-coords = [f(x, y) for x, y in itertools.product(xs, ys)]
-
-# Bad: nested dependent loops and multiple filters
-admins = [u.name for g in groups if g.is_active for u in g.users if u.is_admin]
-```
-
 **Exceptions.** A comprehension may be less readable than a loop when it has multiple filters or multi-step logic. Use the loop.
 
 ## Handle runtime
 
 ### Async and concurrency
-
-**Applies to.** `async def` functions, tasks, cancellation, and resource ownership.
-
-**Verified by.** `Ruff: ASYNC`; the rest is `Review`.
 
 - **MUST** keep blocking I/O and CPU-bound work out of `async def`. Offload it with `asyncio.to_thread` or an executor. (`Ruff: ASYNC`; `Review`)
 
@@ -364,10 +360,6 @@ admins = [u.name for g in groups if g.is_active for u in g.users if u.is_admin]
 **Exceptions.** A framework may provide its own task group or cancellation semantics. Follow the framework's contract and document the difference.
 
 ### Exceptions
-
-**Applies to.** Raising, catching, chaining, and translating exceptions.
-
-**Verified by.** `Ruff: BLE001, B904, E722, S101, S110, S112, TRY300, TRY301`; the rest is `Review`.
 
 - **MUST** chain a translated exception with `raise NewError(...) from err`. (`Ruff: B904`)
 
@@ -438,13 +430,28 @@ def load_good(url: str) -> Record:
 
 ### Date, time, and I/O
 
-**Applies to.** Datetime construction, UTC storage, file access, text encoding, and temporary files.
-
-**Verified by.** `Ruff: DTZ, PTH123, S108`; the rest is `Review`. Path composition and normalization are owned by [Paths](#paths).
-
 - **MUST** construct datetimes with an explicit timezone. (`Ruff: DTZ`)
 
+  ```python
+  from datetime import UTC, datetime
+
+
+  def event_timestamp() -> datetime:
+      """Returns the current UTC timestamp."""
+      return datetime.now(UTC)
+  ```
+
 - **MUST** pass `encoding=` explicitly for text I/O when the minimum Python version is below 3.15. (`Review`)
+
+  ```python
+  from pathlib import Path
+
+
+  def read_events(path: str | Path) -> list[str]:
+      """Reads non-empty event lines from a UTF-8 text file."""
+      text = Path(path).read_text(encoding="utf-8")
+      return [line for line in text.splitlines() if line]
+  ```
 
 - **MUST NOT** use `datetime.utcnow()` or a naive `datetime.now()`. (`Ruff: DTZ`)
 
@@ -456,31 +463,13 @@ def load_good(url: str) -> Record:
 
 - **SHOULD** distinguish text and binary I/O, and pass `newline=` when working with CSV files. (`Review`)
 
-**Integrated example.**
-
-```python
-from datetime import UTC, datetime
-from pathlib import Path
-
-
-def event_timestamp() -> datetime:
-    """Returns the current UTC timestamp."""
-    return datetime.now(UTC)
-
-
-def read_events(path: str | Path) -> list[str]:
-    """Reads non-empty event lines from a UTF-8 text file."""
-    text = Path(path).read_text(encoding="utf-8")
-    return [line for line in text.splitlines() if line]
-```
+Path composition and normalization are owned by [Paths](#paths).
 
 **Exceptions.** A library may require naive datetimes at its boundary. Convert immediately and document the requirement.
 
 ### Paths
 
-**Applies to.** Path composition, input expansion, and canonicalization.
-
-**Verified by.** `Ruff: PTH`; the rest is `Review`. Containment is owned by [Security and logging](#security-and-logging).
+- **SHOULD** use `pathlib.Path` instead of `os.path` for path operations. (`Ruff: PTH`)
 
 - **SHOULD** use one segment per `/` operand when composing a path from controlled segments: `base / "config" / "defaults.toml"`. (`Review`)
 
@@ -488,35 +477,19 @@ def read_events(path: str | Path) -> list[str]:
 
 - **SHOULD** keep a path received as one external value whole: pass it to `Path(value)` or use it as a single `/` operand; do not split it into segments only to rejoin them. (`Review`)
 
+- **SHOULD** call `expanduser()` once at the input boundary for a human-entered path that may start with `~`, before `resolve()`, which does not expand `~`; use `Path.home()` for the current user's home. (`Ruff: PTH111`; `Review`)
+
+- **SHOULD** use `resolve()` when a path must be canonical for comparison, deduplication, or a cache key, or when a symlink target is required; pass `strict=True` when the path must exist. (`Ruff: PTH100`; `Review`)
+
 - **SHOULD NOT** compose a path with `os.path.join`, string concatenation, or an f-string that embeds a separator. (`Ruff: PTH118`; `Review`)
-
-- **SHOULD** call `expanduser()` once at the input boundary for a human-entered path that may start with `~`, before `resolve()`, which does not expand `~`; use `Path.home()` for the current user's home. (`Review`)
-
-- **SHOULD** use `resolve()` when a path must be canonical for comparison, deduplication, or a cache key, or when a symlink target is required; pass `strict=True` when the path must exist. (`Review`)
 
 - **SHOULD NOT** use `absolute()` to obtain a canonical path; it does not expand `~`, collapse `..`, or resolve symlinks. Use it only when preserving the path as written, including symlinks and `..`, is required. (`Review`)
 
-**Integrated example.**
-
-```python
-from pathlib import Path
-
-base = Path("data")
-config_path = base / "config" / "defaults.toml"
-
-segments = ["config", "defaults.toml"]
-joined_path = base.joinpath(*segments)
-
-user_path = Path("~/data/config.toml").expanduser().resolve()
-```
+Path containment is owned by [Security and logging](#security-and-logging).
 
 ## Verify and secure
 
 ### Testing
-
-**Applies to.** Test naming, structure, assertions, parameterization, isolation, and regression coverage.
-
-**Verified by.** `Ruff: PT`; the rest is `Review`.
 
 - **MUST** keep unit tests isolated: no network, real clock, unseeded randomness, or execution order. Inject or freeze external dependencies. (`Review`)
 
@@ -530,50 +503,42 @@ user_path = Path("~/data/config.toml").expanduser().resolve()
 
 - **SHOULD** use the framework's parameterization for repeated cases, such as `pytest.mark.parametrize` or `subTest`. (`Review`)
 
+  ```python
+  import pytest
+
+
+  @pytest.mark.parametrize(
+      ("value", "expected"),
+      [(0, False), (1, True), (-1, True)],
+  )
+  def test_is_ready_returns_false_only_for_zero(value: int, expected: bool) -> None:
+      assert is_ready(value) is expected
+  ```
+
 - **SHOULD** use the framework's native assertion style: plain `assert` in pytest, `assertEqual` and friends in unittest. (`Review`)
 
-- **SHOULD** assert exception types with `pytest.raises` or `unittest.assertRaises` and match the message when it is part of the contract. (`Review`)
+- **SHOULD** assert exception types with `pytest.raises` or `TestCase.assertRaises` and match the message when it is part of the contract. (`Review`)
+
+  ```python
+  from pathlib import Path
+
+  import pytest
+
+
+  def test_load_config_raises_for_missing_file(tmp_path: Path) -> None:
+      with pytest.raises(FileNotFoundError):
+          load_config(tmp_path / "missing.toml")
+  ```
 
 - **SHOULD** add a test that reproduces a defect, and confirm it fails before the fix when practical. (`Review`)
 
 Tests and `conftest.py` ignore `S101`, `S105`, `S106`, `S107`, `S108`, and `S311`; the production rules live in [Exceptions](#exceptions), [Date, time, and I/O](#date-time-and-io), and [Security and logging](#security-and-logging). The test ignores are for obvious dummy values only. `PT009` and `PT027` are ignored globally for unittest projects; see [Intentional ignores](ruff-config.md#intentional-ignores).
 
-**Integrated example.**
-
-```python
-from pathlib import Path
-
-import pytest
-
-
-@pytest.mark.parametrize(
-    ("value", "expected"),
-    [(0, False), (1, True), (-1, True)],
-)
-def test_is_ready_returns_false_only_for_zero(value: int, expected: bool) -> None:
-    assert is_ready(value) is expected
-
-
-def test_load_config_raises_for_missing_file(tmp_path: Path) -> None:
-    with pytest.raises(FileNotFoundError):
-        load_config(tmp_path / "missing.toml")
-```
-
 **Exceptions.** A pytest-only project may re-enable `PT009` and `PT027` to enforce plain `assert` and `pytest.raises`. Keep `tests/**` ignores scoped to tests.
 
 ### Security and logging
 
-**Applies to.** Diagnostics, log levels, secret handling, dangerous execution, deserialization, subprocesses, path traversal, and security-sensitive randomness.
-
-**Verified by.** `Ruff: S, T20, TRY400`; the rest is `Review`.
-
 - **MUST** keep secrets, credentials, and personal data out of logs and exception messages. (`Review`)
-
-- **MUST NOT** use `eval` or `exec` on untrusted input. (`Ruff: S102, S307`)
-
-- **MUST NOT** hardcode any credential, password, token, API key, or personal data. (`Ruff: S105, S106, S107`; `Review`)
-
-- **MUST NOT** use `shell=True` with untrusted input. Pass an argument list, for example `subprocess.run(["ls", path], check=True)`. (`Ruff: S602`)
 
 - **MUST** keep an externally supplied path under its base directory before using it to access the filesystem; an absolute value replaces the base and `..` escapes it. Resolve both the base and the candidate and require `is_relative_to()`. (`Review`)
 
@@ -582,10 +547,16 @@ def test_load_config_raises_for_missing_file(tmp_path: Path) -> None:
 
   base = Path("/srv/data").resolve()
   user_value = "reports/2026.csv"
-  candidate = (base / user_value).expanduser().resolve()
+  candidate = (base / user_value).resolve()
   if not candidate.is_relative_to(base):
       raise ValueError("path escapes the base directory")
   ```
+
+- **MUST NOT** use `eval` or `exec` on untrusted input. (`Ruff: S102, S307`)
+
+- **MUST NOT** hardcode any credential, password, token, API key, or personal data. (`Ruff: S105, S106, S107`; `Review`)
+
+- **MUST NOT** use `shell=True` with untrusted input. Pass an argument list, for example `subprocess.run(["ls", path], check=True)`. (`Ruff: S602`)
 
 - **MUST NOT** deserialize untrusted data with `pickle` or `marshal`. Use JSON or a typed parser. (`Ruff: S301, S302`)
 
@@ -622,10 +593,6 @@ Security rules marked SHOULD are strong defaults. A deviation needs a specific, 
 
 ### Performance
 
-**Applies to.** Mechanical performance findings, caching, and measurement.
-
-**Verified by.** `Ruff: PERF`; the rest is `Review`.
-
 - **SHOULD** fix `PERF` findings or suppress them with a coded reason. (`Ruff: PERF`)
 
 - **SHOULD** measure before optimizing. Readability and correctness come first. (`Review`)
@@ -654,10 +621,6 @@ Generator and stream choices are owned by [Comprehensions and iteration](#compre
 **Exceptions.** A measured hot path may justify a less readable implementation. Add a comment with the measurement and keep the optimization local.
 
 ### Suppressions
-
-**Applies to.** `# noqa`, type-checker ignores, and project-wide exceptions.
-
-**Verified by.** `Ruff: PGH003, PGH004, RUF100`; the reason is `Review`.
 
 - **MUST** include a specific rule code in every `# noqa` and a specific code in every `# type: ignore`. (`Ruff: PGH003, PGH004`)
 
