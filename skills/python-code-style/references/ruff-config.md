@@ -80,7 +80,7 @@ The template intentionally omits `src`. Ruff defaults to `[".", "src"]`, which c
 | `PLC0415` | imports outside the top level | [Style: imports](style-rules.md#imports) |
 | `PLW0603` | `global` statement | [Language: functions and parameters](language-rules.md#functions-and-parameters) |
 | `PT` | pytest style | [Language: testing](language-rules.md#testing) |
-| `PTH` | path handling | [Style: layout](style-rules.md#module-and-package-layout) |
+| `PTH` | path handling | [Language: paths](language-rules.md#paths), [Language: date, time, and I/O](language-rules.md#date-time-and-io) |
 | `RET` | return style | [Language: functions and parameters](language-rules.md#functions-and-parameters) |
 | `RUF` | Ruff-specific rules | [RUF012](language-rules.md#type-annotations), [RUF022](style-rules.md#public-api-and-exports), [RUF100](language-rules.md#suppressions) |
 | `S` | security checks | [Language: security and logging](language-rules.md#security-and-logging), [exceptions](language-rules.md#exceptions), [I/O](language-rules.md#date-time-and-io) |

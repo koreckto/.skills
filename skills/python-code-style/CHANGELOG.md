@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [1.1.0] - 2026-11-10
 
+### Added
+
+- Added pattern matching rules: prefer `match` and `case` for structural dispatch over `if`/`elif` chains, keep `if`/`elif` for simple conditions, and forbid bare-name capture patterns used as constant comparisons.
+- Added type annotation rules for when to create a type alias, prioritizing domain meaning over type length and distinguishing aliases from `NewType`.
+- Added a type annotation formatting rule for wrapping a union annotation that does not fit on one line in parentheses with one member per line.
+- Added path composition rules: one segment per `/` operand, `joinpath(*segments)` for dynamic sequences, whole external paths as one value, and no `os.path.join`, concatenation, or f-string separators.
+- Added path normalization rules for `expanduser()`, `resolve()`, and `absolute()`, plus containment validation for externally supplied paths.
+
 ### Changed
 
 - Expanded Google-style docstring layout rules to require argument, return, yield, exception, and attribute descriptions on separate indented lines below their declarations.
@@ -13,6 +21,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Extended field documentation to every public field of a public data model, including framework models such as Pydantic.
 - Defined internal symbols by their defining boundaries and clarified the naming of callbacks registered by object reference.
 - Clarified that a single call or data structure spanning multiple lines is one phase when separating long function bodies with blank lines.
+- Moved the repository versioning and deprecation policy to the root `AGENTS.md`; no rule changes.
+- Grouped the style and language references under category headings that follow the writing workflow; moved `Public API and exports` and `Data modeling` into their matching groups; no rule changes.
+- Moved path handling from module layout to the new `Paths` section and the `Path.open()` rule to Date, time, and I/O; no rule level changes.
 
 ## [1.0.0] - 2026-11-09
 

@@ -1,24 +1,24 @@
 # Style Rules
 
-Layout, imports, naming, formatting, docstrings, comments, code examples, and exports for Python source files, tests, and documentation.
+Layout, imports, exports, naming, formatting, docstrings, comments, and code examples for Python source files, tests, and documentation.
 
-## Module and package layout
+## Organize the module
+
+### Module and package layout
 
 **Applies to.** File structure, member order, import-time behavior, and the `if __name__ == "__main__":` guard.
 
-**Verified by.** `Ruff: PTH, PTH123`; `Review` for import-time behavior. Import placement and order are owned by [Imports](#imports).
+**Verified by.** `Review`. Import placement and order are owned by [Imports](#imports).
 
 - **MUST** keep import time free of I/O, network calls, global state mutation, and business logic. (`Review`)
 
 - **SHOULD** keep module-level code to imports, definitions, constants, type aliases, and the `if __name__ == "__main__":` guard. (`Review`)
 
-- **SHOULD** use `pathlib` for path manipulation and `Path.open()` for file access. (`Ruff: PTH, PTH123`)
-
 - **SHOULD** order members as: module docstring, imports, constants, type aliases, classes, functions, and the entry guard. Package exports are owned by [Public API and exports](#public-api-and-exports). Dependency order wins when a name is evaluated at import time. (`Review`)
 
 - **SHOULD** keep public members before private `_` helpers. Dunder methods keep their conventional placement. (`Review`)
 
-Text-encoding rules are owned by [Date, time, and I/O](language-rules.md#date-time-and-io). Section separator comments are owned by [Comments](#comments).
+Path composition and normalization are owned by [Paths](language-rules.md#paths); file access and text-encoding rules are owned by [Date, time, and I/O](language-rules.md#date-time-and-io). Section separator comments are owned by [Comments](#comments).
 
 **Integrated example.**
 
@@ -38,7 +38,7 @@ if __name__ == "__main__":
 
 **Exceptions.** A framework that requires import-time registration may execute code at import time. Isolate that code in a dedicated module and document why.
 
-## Imports
+### Imports
 
 **Applies to.** Import order, grouping, absolute and relative imports, aliases, and re-exports.
 
@@ -87,7 +87,34 @@ from myapp.models import User
 
 **Exceptions.** A generated module may need a wildcard re-export. Isolate it and document the generator.
 
-## Naming
+### Public API and exports
+
+**Applies to.** `__all__`, package re-exports, and public and private names.
+
+**Verified by.** `Ruff: F401, F822, RUF022`; the rest is `Review`. Wildcard imports are owned by [Imports](#imports); member ordering is owned by [Module and package layout](#module-and-package-layout).
+
+- **SHOULD** sort `__all__`. (`Ruff: RUF022`)
+
+  ```python
+  # Good: explicit, sorted re-exports in a package __init__.py
+  from myapp.models import Account, User
+
+  __all__ = ["Account", "User"]
+  ```
+
+- **SHOULD** ensure every name in `__all__` is defined and exported. (`Ruff: F401, F822`)
+
+- **SHOULD** declare `__all__` only in a re-exporting package `__init__.py`. Ordinary modules omit it. (`Review`)
+
+- **SHOULD** re-export selected symbols with explicit imports in `__init__.py`. (`Review`)
+
+- **MAY** declare `__all__` in a module that intentionally exposes a stable public surface. (`Review`)
+
+**Exceptions.** Generated re-export modules may need a different layout. Keep the generator and the generated file in sync.
+
+## Name and format
+
+### Naming
 
 **Applies to.** Modules, packages, classes, functions, variables, constants, type variables, and exceptions.
 
@@ -178,7 +205,7 @@ def load_account(account_id: str, *, no_cache: bool = False) -> User:
 
 **Exceptions.** Framework-imposed names and established public APIs may keep a different name. Record the reason in the project's standards.
 
-## Formatting and line structure
+### Formatting and line structure
 
 **Applies to.** Formatter output, line length, blank lines, statement layout, and string layout.
 
@@ -229,7 +256,9 @@ The template does not set `line-length`, so Ruff's default of 88 applies. A proj
 
 **Exceptions.** Generated code may not match the formatter. Keep it in a separate file and exclude it from formatting and linting explicitly.
 
-## Docstrings
+## Document and exemplify
+
+### Docstrings
 
 **Applies to.** Public modules, classes, functions, methods, and the public fields of public data models (`@dataclass`, `TypedDict`, `NamedTuple`, or a framework model class with declarative fields). A model is public when it is part of the package's public API under [Naming](#naming). A field is public when its name does not begin with `_` and it is not a `ClassVar`, `model_config`, or another framework configuration attribute.
 
@@ -287,7 +316,7 @@ def fetch_users(query: str, *, limit: int = 100) -> list[User]:
 
 **Exceptions.** Functions and methods whose names begin with `_` may use a summary-only docstring. A function or method defined in an internal module may also use a summary-only docstring, even when its name has no leading underscore. A module is internal when it is outside the package's public API as defined in [Naming](#naming), for example because its name begins with `_` or it is imported only within its own package. Package docstrings, magic methods, and `__init__` are exempt from the docstring-presence rule.
 
-## Comments
+### Comments
 
 **Applies to.** Inline comments, block comments, TODOs, and section separators.
 
@@ -319,7 +348,7 @@ response = client.submit_job(payload)  # TODO: handle errors
 
 **Exceptions.** A comment that quotes a specification or upstream issue may be longer than usual. Keep it accurate and link the source.
 
-## Code examples
+### Code examples
 
 **Applies to.** Examples in docstrings, README and documentation files, and tests.
 
@@ -352,28 +381,3 @@ response = client.submit_job(payload)  # TODO: handle errors
 - **SHOULD NOT** add suppressions to a bad example just to keep it in a linted file; move it to documentation or exclude it from the check. (`Review`)
 
 - **MAY** separate statement-level examples with a single blank line. Top-level definitions and classes keep the two blank lines from [Formatting and line structure](#formatting-and-line-structure). (`Review`)
-
-## Public API and exports
-
-**Applies to.** `__all__`, package re-exports, and public and private names.
-
-**Verified by.** `Ruff: F401, F822, RUF022`; the rest is `Review`. Wildcard imports are owned by [Imports](#imports); member ordering is owned by [Module and package layout](#module-and-package-layout).
-
-- **SHOULD** sort `__all__`. (`Ruff: RUF022`)
-
-  ```python
-  # Good: explicit, sorted re-exports in a package __init__.py
-  from myapp.models import Account, User
-
-  __all__ = ["Account", "User"]
-  ```
-
-- **SHOULD** ensure every name in `__all__` is defined and exported. (`Ruff: F401, F822`)
-
-- **SHOULD** declare `__all__` only in a re-exporting package `__init__.py`. Ordinary modules omit it. (`Review`)
-
-- **SHOULD** re-export selected symbols with explicit imports in `__init__.py`. (`Review`)
-
-- **MAY** declare `__all__` in a module that intentionally exposes a stable public surface. (`Review`)
-
-**Exceptions.** Generated re-export modules may need a different layout. Keep the generator and the generated file in sync.
