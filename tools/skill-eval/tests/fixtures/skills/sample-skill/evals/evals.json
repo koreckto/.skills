@@ -1,0 +1,22 @@
+{
+  "skill_name": "sample-skill",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Create a chart and a valid JSON summary from the input file.",
+      "expected_output": "A non-empty chart.png and a valid result.json.",
+      "files": ["evals/files/input.txt"],
+      "assertions": [
+        "chart.png exists and is non-empty.",
+        "result.json is valid JSON."
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Write one short sentence about the input.",
+      "expected_output": "A short sentence.",
+      "files": ["evals/files/input.txt"],
+      "assertions": []
+    }
+  ]
+}

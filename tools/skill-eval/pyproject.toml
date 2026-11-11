@@ -1,0 +1,153 @@
+[project]
+name = "skill-eval"
+version = "0.1.0"
+description = "Agent Skills evaluation tool for Koreckto skills."
+readme = "README.md"
+requires-python = ">=3.13"
+license = "MIT"
+dependencies = [
+  "anyio>=4.16",
+  "httpx2>=2.16.0",
+  "pydantic>=2.12.5",
+  "pydantic-ai-harness[coder,skills]>=0.66.0",
+  "pydantic-ai-slim>=2.66.0",
+  "pydantic-evals>=2.66.0",
+  "pyyaml>=6.0.2",
+  "skills-ref>=0.1.1",
+  "typer>=0.15",
+]
+
+[project.scripts]
+skill-eval = "skill_eval.cli:app"
+
+[dependency-groups]
+dev = [
+  { include-group = "lint" },
+  { include-group = "test" },
+]
+lint = [
+  "ruff>=0.8",
+  "ty>=0.0.100",
+]
+test = [
+  "pytest>=8.3",
+  "pytest-cov>=7.1.0",
+]
+
+[build-system]
+requires = ["uv_build>=0.13.7,<0.14"]
+build-backend = "uv_build"
+
+[tool.pytest.ini_options]
+addopts = "-ra"
+testpaths = ["tests"]
+anyio_mode = "auto"
+
+[tool.ruff.format]
+docstring-code-format = true
+
+[tool.ruff.lint]
+future-annotations = false
+select = [
+  "A",                      # flake8-builtins
+  "ANN",                    # flake8-annotations
+  "ARG",                    # flake8-unused-arguments
+  "ASYNC",                  # flake8-async
+  "B",                      # flake8-bugbear
+  "BLE",                    # flake8-blind-except
+  "C4",                     # flake8-comprehensions
+  "C90",                    # mccabe
+  "D",                      # pydocstyle
+  "DTZ",                    # flake8-datetimez: timezone-aware datetimes
+  "E",                      # pycodestyle errors
+  "ERA",                    # eradicate
+  "F",                      # pyflakes
+  "FBT001",                 # flake8-boolean-trap: boolean positional argument
+  "FBT002",                 # flake8-boolean-trap: boolean default positional argument
+  "FURB",                   # refurb
+  "I",                      # isort
+  "N818",                   # pep8-naming: error-suffix-on-exception-name
+  "PERF",                   # Perflint
+  "PGH003",                 # pygrep-hooks: blanket type: ignore
+  "PGH004",                 # pygrep-hooks: blanket noqa
+  "PLC0415",                # Pylint: imports outside the top-level scope
+  "PLW0603",                # Pylint: global statement
+  "PT",                     # flake8-pytest-style
+  "PTH",                    # flake8-use-pathlib
+  "RET",                    # flake8-return
+  "RUF",                    # Ruff-specific rules
+  "S",                      # flake8-bandit
+  "T20",                    # flake8-print
+  "TC",                     # flake8-type-checking
+  "TID251",                 # banned-api from flake8-tidy-imports
+  "TRY",                    # tryceratops
+  "UP",                     # pyupgrade
+  "W",                      # pycodestyle warnings
+]
+ignore = [
+  "D104",                   # undocumented-public-package
+  "D105",                   # undocumented-magic-method
+  "D107",                   # undocumented-public-init
+  "D415",                   # ends-in-punctuation
+  "PT009",                  # unittest-style assertion; allow unittest projects
+  "PT027",                  # unittest-style assertRaises; allow unittest projects
+  "RUF001",                 # ambiguous-unicode-character-string; non-English text is allowed
+  "RUF002",                 # ambiguous-unicode-character-docstring; non-English text is allowed
+  "RUF003",                 # ambiguous-unicode-character-comment; non-English text is allowed
+  "TRY003",                 # raise-vanilla-args: keep messages at the raise site
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Typer uses function calls in option and argument defaults.
+"src/skill_eval/cli.py" = ["B008"]
+"tests/**" = [
+  # Unnecessary in test files.
+  "ANN",                            # flake8-annotations
+  "ARG",                            # flake8-unused-arguments (fixtures for side effects)
+  "D",                              # pydocstyle
+  "FBT001",                         # flake8-boolean-trap: boolean positional argument (parametrize/fixtures)
+  "FBT002",                         # flake8-boolean-trap: boolean default positional argument
+  "TC",                             # flake8-type-checking (fixture annotations)
+  # Conflicts with pytest assertions.
+  "S101",                           # assert
+  # Allowed for dummy test values.
+  "S105",                           # hardcoded-password-string
+  "S106",                           # hardcoded-password-func-arg
+  "S107",                           # hardcoded-password-default
+  "S108",                           # hardcoded-temp-file
+  "S311",                           # suspicious-non-cryptographic-random-usage
+]
+"conftest.py" = [
+  # Unnecessary in test files.
+  "ANN",                            # flake8-annotations
+  "ARG",                            # flake8-unused-arguments (fixtures for side effects)
+  "D",                              # pydocstyle
+  "FBT001",                         # flake8-boolean-trap: boolean positional argument (fixtures)
+  "FBT002",                         # flake8-boolean-trap: boolean default positional argument
+  "TC",                             # flake8-type-checking (fixture annotations)
+  # Conflicts with pytest assertions.
+  "S101",                           # assert
+  # Allowed for dummy test values.
+  "S105",                           # hardcoded-password-string
+  "S106",                           # hardcoded-password-func-arg
+  "S107",                           # hardcoded-password-default
+  "S108",                           # hardcoded-temp-file
+  "S311",                           # suspicious-non-cryptographic-random-usage
+]
+
+[tool.ruff.lint.flake8-bandit]
+# Check typed exceptions in try-except-pass/continue; intentional ignores use
+# contextlib.suppress.
+check-typed-exception = true
+
+[tool.ruff.lint.flake8-tidy-imports.banned-api]
+"__future__.annotations".msg = "Do not use `from __future__ import annotations`; use quoted annotations or target-native syntax."
+
+[tool.ruff.lint.flake8-type-checking]
+quote-annotations = true
+
+[tool.ruff.lint.isort]
+extra-standard-library = ["_typeshed", "typing_extensions"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
