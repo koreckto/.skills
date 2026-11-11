@@ -1,9 +1,11 @@
 {
   "$schema": "https://raw.githubusercontent.com/streetsidesoftware/cspell/main/cspell.schema.json",
   "words": [
+    "addopts",
     "agentskills",
     "annotationlib",
     "asyncio",
+    "autouse",
     "conftest",
     "contextlib",
     "dataclass",
@@ -13,17 +15,26 @@
     "docstrings",
     "doctests",
     "Dunder",
+    "elif",
+    "evals",
+    "expanduser",
+    "frontmatter",
     "frozendict",
     "frozenset",
-    "frontmatter",
     "functools",
     "FURB",
+    "getpgid",
     "isinstance",
     "isort",
     "itertools",
+    "joinpath",
+    "jsonable",
+    "killpg",
     "Koreckto",
     "kwargs",
+    "logfire",
     "loguru",
+    "lowlevel",
     "mccabe",
     "myapp",
     "negotiables",
@@ -32,6 +43,8 @@
     "noxfile",
     "pathlib",
     "Perflint",
+    "pgid",
+    "pids",
     "pprint",
     "pycodestyle",
     "pydantic",
@@ -46,11 +59,11 @@
     "setdefault",
     "splitlines",
     "structlog",
+    "testpaths",
     "tombi",
     "tomllib",
     "tryceratops",
     "typeshed",
-    "unitless",
     "unhashable",
     "urlsafe",
     "utcnow",
@@ -60,7 +73,19 @@
     ".git/**",
     ".github/**",
     ".markdownlint-cli2.jsonc",
-    "LICENSE"
+    "LICENSE",
+    "**/*.lock"
+  ],
+  // Python source and Python-project TOML use the bundled Python dictionary.
+  "languageSettings": [
+    {
+      "languageId": "python",
+      "dictionaries": ["python"]
+    },
+    {
+      "languageId": "toml",
+      "dictionaries": ["python"]
+    }
   ],
   "enableGlobDot": true,
   "useGitignore": true
