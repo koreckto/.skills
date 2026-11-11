@@ -72,7 +72,10 @@ async def test_verifier_evidence_is_truncated_in_grading(
     skill = tmp_path / "sample-skill"
     shutil.copytree(sample_skill, skill)
     (skill / "evals" / "verify.py").write_text(
-        "import sys\nprint('x' * 20000)\nsys.exit(0)\n",
+        "import sys\n"
+        "print('x' * 20000)\n"
+        "print('y' * 20000, file=sys.stderr)\n"
+        "sys.exit(0)\n",
         encoding="utf-8",
     )
     config = make_config(skill, tmp_path / "workspace")
@@ -89,11 +92,15 @@ async def test_verifier_evidence_is_truncated_in_grading(
     )
     assert result.status == "passed"
     assert "[truncated " in evidence
-    assert len(evidence) < 10000
+    assert len(evidence.encode("utf-8")) < 9000
     stdout_path = next(
         result.iteration_dirs[0].glob("eval-1/with_skill/evidence/checks/*/stdout.txt")
     )
     assert stdout_path.read_text(encoding="utf-8") == "x" * 20000 + "\n"
+    stderr_path = next(
+        result.iteration_dirs[0].glob("eval-1/with_skill/evidence/checks/*/stderr.txt")
+    )
+    assert stderr_path.read_text(encoding="utf-8") == "y" * 20000 + "\n"
 
 
 def test_hash_tree_helper_file_added_changes_bundle_hash(

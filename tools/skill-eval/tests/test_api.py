@@ -4,6 +4,7 @@ from pathlib import Path
 
 import anyio
 import pytest
+from pydantic_ai.exceptions import ModelAPIError, ModelConnectionError
 
 from skill_eval._datasets import hash_tree
 from skill_eval.api import evaluate_skill, load_eval_dataset
@@ -254,7 +255,19 @@ async def test_unknown_case_is_rejected(sample_skill: Path, tmp_path: Path) -> N
         await evaluate_skill(config, runner=FakeRunner())
 
 
-async def test_no_assertions_is_ungraded(sample_skill: Path, tmp_path: Path) -> None:
+@pytest.mark.parametrize(
+    ("gates", "expected"),
+    [
+        (None, "ungraded"),
+        (GateConfig(min_pass_rate=0.9), "error"),
+    ],
+)
+async def test_no_assertions_gate_semantics(
+    sample_skill: Path,
+    tmp_path: Path,
+    gates: GateConfig | None,
+    expected: str,
+) -> None:
     skill = tmp_path / "sample-skill"
     shutil.copytree(sample_skill, skill)
     eval_file = skill / "evals" / "evals.json"
@@ -262,15 +275,12 @@ async def test_no_assertions_is_ungraded(sample_skill: Path, tmp_path: Path) -> 
     raw["evals"] = raw["evals"][:1]
     raw["evals"][0]["assertions"] = []
     eval_file.write_text(json.dumps(raw), encoding="utf-8")
-    config_file = skill / "evals" / "skill-eval.yaml"
-    config_file.write_text(
-        "version: 1\ngates:\n  min_pass_rate: 0.9\n", encoding="utf-8"
-    )
+    (skill / "evals" / "skill-eval.yaml").write_text("version: 1\n", encoding="utf-8")
 
-    config = make_config(skill, tmp_path / "workspace")
+    config = make_config(skill, tmp_path / "workspace", gates=gates)
     result = await evaluate_skill(config, runner=FakeRunner(pass_without=True))
 
-    assert result.status == "ungraded"
+    assert result.status == expected
     assert result.pass_rate is None
     benchmark = _read(result.experiment_dir / "benchmark.json")
     with_skill = benchmark["run_summary"]["with_skill"]
@@ -279,6 +289,9 @@ async def test_no_assertions_is_ungraded(sample_skill: Path, tmp_path: Path) -> 
     assert with_skill["time_seconds"]["mean"] > 0
     assert with_skill["tokens"]["n"] == 1
     assert with_skill["tokens"]["mean"] == 150
+    if expected == "error":
+        assert "min_pass_rate" in (result.message or "")
+        assert "could not be evaluated" in (result.message or "")
 
 
 # ==================================================================================
@@ -310,6 +323,57 @@ async def test_transient_transport_error_is_retried(
     assert (
         runner.calls >= 3
     )  # one failed attempt plus the retry, then the remaining case(s)
+
+
+class ModelConnectionFlakyRunner(FakeRunner):
+    def __init__(self) -> None:
+        super().__init__(pass_without=True)
+        self.calls = 0
+
+    async def run(self, request: RunRequest) -> RunObservation:
+        self.calls += 1
+        if self.calls == 1:
+            raise ModelConnectionError("test:model", "connection reset")
+        return await super().run(request)
+
+
+async def test_model_connection_error_is_retried(
+    sample_skill: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr("skill_eval.api.anyio.sleep", _no_sleep)
+    config = make_config(sample_skill, tmp_path / "workspace")
+    runner = ModelConnectionFlakyRunner()
+    result = await evaluate_skill(config, runner=runner)
+
+    assert result.status == "passed"
+    assert runner.calls >= 3
+
+
+class NonTransientModelErrorRunner(FakeRunner):
+    def __init__(self) -> None:
+        super().__init__()
+        self.calls = 0
+
+    async def run(self, request: RunRequest) -> RunObservation:
+        self.calls += 1
+        raise ModelAPIError("test:model", "invalid request")
+
+
+async def test_non_transient_model_error_is_not_retried(
+    sample_skill: Path, tmp_path: Path
+) -> None:
+    config = make_config(
+        sample_skill,
+        tmp_path / "workspace",
+        baseline="none",
+        case_ids=("1",),
+    )
+    runner = NonTransientModelErrorRunner()
+
+    result = await evaluate_skill(config, runner=runner)
+
+    assert result.status == "error"
+    assert runner.calls == 1
 
 
 class DirtyRetryRunner(FakeRunner):

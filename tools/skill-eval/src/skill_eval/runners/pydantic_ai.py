@@ -6,10 +6,11 @@ from importlib.metadata import version
 from typing import TYPE_CHECKING, Any, cast
 
 import anyio
-from pydantic_ai import Agent
+from pydantic_ai import Agent, capture_run_messages
 from pydantic_ai.capabilities import LocalWorkspace
 from pydantic_ai.messages import (
     ModelMessage,
+    ModelMessagesTypeAdapter,
     ModelResponse,
     ToolCallPart,
     ToolReturnPart,
@@ -132,14 +133,19 @@ class PydanticAIRunner:
             if request.model_settings
             else None
         )
-        result = await _run_agent_with_cleanup(
-            agent,
-            prompt=prompt,
-            model_settings=model_settings,
-            timeout_seconds=request.timeout_seconds,
-            workspace_dir=request.workspace_dir,
-            env=environment,
-        )
+        with capture_run_messages() as captured_messages:
+            try:
+                result = await _run_agent_with_cleanup(
+                    agent,
+                    prompt=prompt,
+                    model_settings=model_settings,
+                    timeout_seconds=request.timeout_seconds,
+                    workspace_dir=request.workspace_dir,
+                    env=environment,
+                )
+            except BaseException as err:
+                await _record_failure_evidence(request, captured_messages, err)
+                raise
 
         messages = result.all_messages()
         loaded_skills, tool_calls = _extract_evidence(messages)
@@ -299,6 +305,30 @@ def _prompt_with_fixtures(request: RunRequest) -> str:
             relative.append(path.name)
     listing = "\n".join(f"- {item}" for item in relative)
     return f"{request.prompt}\n\nInput files are available in the workspace:\n{listing}"
+
+
+async def _record_failure_evidence(
+    request: RunRequest,
+    messages: list[ModelMessage],
+    error: BaseException,
+) -> None:
+    """Best-effort preserve captured messages without masking the original error."""
+    try:
+        with anyio.CancelScope(shield=True):
+            evidence_dir = anyio.Path(request.raw_evidence_dir)
+            await evidence_dir.mkdir(parents=True, exist_ok=True)
+            loaded_skills, tool_calls = _extract_evidence(messages)
+            await (evidence_dir / "messages.json").write_text(
+                _pretty_messages(ModelMessagesTypeAdapter.dump_json(messages)),
+                encoding="utf-8",
+            )
+            await _write_runner_log(
+                request.raw_evidence_dir / "runner.jsonl",
+                loaded_skills,
+                tool_calls,
+            )
+    except Exception as write_error:  # noqa: BLE001  # keep the original failure
+        error.add_note(f"failed to write failure evidence: {write_error}")
 
 
 def _extract_evidence(

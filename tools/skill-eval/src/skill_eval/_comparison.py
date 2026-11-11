@@ -54,18 +54,94 @@ def _comparison_delta(
     return delta
 
 
-def _incomparable_gate_reasons(gates: GateConfig | None) -> list[str]:
-    """Describe gates that cannot be evaluated for incompatible inputs."""
+def _unavailable_gate_reasons(
+    gates: GateConfig | None, *, suite: str, reason: str
+) -> list[str]:
+    """Describe configured gates that cannot apply to the compared suite."""
     if gates is None:
         return []
+    configured = [("min_pass_rate", gates.min_pass_rate is not None)]
+    if suite == "output-quality":
+        configured.append(("max_regression", gates.max_regression is not None))
     return [
-        f"{name} gate could not be evaluated because experiments are not comparable"
-        for name, configured in (
-            ("min_pass_rate", gates.min_pass_rate is not None),
-            ("max_regression", gates.max_regression is not None),
-        )
-        if configured
+        f"{name} gate could not be evaluated because {reason}"
+        for name, enabled in configured
+        if enabled
     ]
+
+
+def _evaluated_gates(
+    gates: GateConfig | None,
+    *,
+    suite: str,
+    candidate_micro: float,
+    regression: float | None,
+) -> tuple[bool, bool, list[str]]:
+    """Return gate failure, gate error and reasons for graded experiments."""
+    gate_failed = False
+    gate_error = False
+    reasons: list[str] = []
+    if gates is None:
+        return gate_failed, gate_error, reasons
+    if gates.min_pass_rate is not None and candidate_micro < gates.min_pass_rate:
+        gate_failed = True
+        reasons.append(
+            f"pass rate {candidate_micro:.3f} is below gate {gates.min_pass_rate:.3f}"
+        )
+    if gates.max_regression is not None and suite == "output-quality":
+        if regression is None:
+            gate_error = True
+            reasons.append("pass rate regression gate could not be evaluated")
+        elif regression < -gates.max_regression:
+            gate_failed = True
+            reasons.append(
+                f"pass rate regression {-regression:.3f} exceeds gate "
+                f"{gates.max_regression:.3f}"
+            )
+    return gate_failed, gate_error, reasons
+
+
+def _comparable_status(
+    *,
+    gates: GateConfig | None,
+    suite: str,
+    candidate_failed: bool,
+    candidate_micro: float | None,
+    baseline_micro: float | None,
+    regression: float | None,
+) -> tuple[ExperimentStatus, list[str]]:
+    """Return status and reasons for comparable experiment summaries."""
+    if candidate_micro is None:
+        gate_reasons = _unavailable_gate_reasons(
+            gates,
+            suite=suite,
+            reason="the candidate pass rate is unavailable",
+        )
+        if candidate_failed:
+            return "failed", [
+                *gate_reasons,
+                "candidate experiment status is failed",
+            ]
+        if gate_reasons:
+            return "error", gate_reasons
+        return "ungraded", []
+    gate_failed, gate_error, gate_reasons = _evaluated_gates(
+        gates,
+        suite=suite,
+        candidate_micro=candidate_micro,
+        regression=regression,
+    )
+    if candidate_failed:
+        gate_reasons.append("candidate experiment status is failed")
+    if candidate_failed or gate_failed:
+        return "failed", gate_reasons
+    if gate_error:
+        return "error", gate_reasons
+    if gates is not None and gates.min_pass_rate is not None:
+        return "passed", gate_reasons
+    if baseline_micro is None:
+        return "ungraded", gate_reasons
+    return "passed", gate_reasons
 
 
 def compare_experiments(
@@ -136,39 +212,27 @@ def compare_experiments(
 
     status: ExperimentStatus = "ungraded"
     if not comparable:
-        gate_reasons = _incomparable_gate_reasons(gates)
+        gate_reasons = _unavailable_gate_reasons(
+            gates,
+            suite=candidate_manifest.suite,
+            reason="experiments are not comparable",
+        )
         reasons.extend(gate_reasons)
         if gate_reasons:
             status = "error"
     elif candidate_summary.status == "error" or baseline_summary.status == "error":
         status = "error"
         reasons.append("one or both experiments are incomplete")
-    elif candidate_micro is not None and baseline_micro is not None:
-        gate_failed = False
-        if (
-            gates is not None
-            and gates.min_pass_rate is not None
-            and candidate_micro is not None
-            and candidate_micro < gates.min_pass_rate
-        ):
-            gate_failed = True
-            reasons.append(
-                f"pass rate {candidate_micro:.3f} is below gate "
-                f"{gates.min_pass_rate:.3f}"
-            )
-        if gates is not None and gates.max_regression is not None:
-            regression = delta["pass_rate"]
-            if regression is None:
-                status = "error"
-                reasons.append("pass rate regression gate could not be evaluated")
-            elif regression < -gates.max_regression:
-                gate_failed = True
-                reasons.append(
-                    f"pass rate regression {-regression:.3f} exceeds gate "
-                    f"{gates.max_regression:.3f}"
-                )
-        if status != "error":
-            status = "failed" if gate_failed else "passed"
+    else:
+        status, status_reasons = _comparable_status(
+            gates=gates,
+            suite=candidate_manifest.suite,
+            candidate_failed=candidate_summary.status == "failed",
+            candidate_micro=candidate_micro,
+            baseline_micro=baseline_micro,
+            regression=delta["pass_rate"],
+        )
+        reasons.extend(status_reasons)
 
     message = (
         "experiments are not directly comparable"

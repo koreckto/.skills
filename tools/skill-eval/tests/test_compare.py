@@ -30,10 +30,12 @@ async def _comparison_experiment(
     *,
     case_mean: float | None,
     assertion_micro: float | None,
+    suite: str = "output-quality",
+    status: str = "passed",
 ) -> Path:
     manifest = {
         "schema_version": 1,
-        "suite": "output-quality",
+        "suite": suite,
         "runner": "fake",
         "mode": "auto",
         "target_model": "test:model",
@@ -44,7 +46,7 @@ async def _comparison_experiment(
     }
     summary = {
         "schema_version": 1,
-        "status": "passed",
+        "status": status,
         "pass_rate": assertion_micro,
         "benchmark": {
             "run_summary": {
@@ -204,10 +206,88 @@ async def test_compare_ungraded_experiment_stays_ungraded(tmp_path: Path) -> Non
         tmp_path / "baseline", case_mean=None, assertion_micro=None
     )
 
-    result = compare_experiments(candidate, baseline, GateConfig(max_regression=0.1))
+    result = compare_experiments(candidate, baseline)
 
     assert result.status == "ungraded"
     assert result.delta["pass_rate"] is None
+
+
+async def test_compare_ungraded_candidate_with_min_gate_is_error(
+    tmp_path: Path,
+) -> None:
+    candidate = await _comparison_experiment(
+        tmp_path / "candidate", case_mean=None, assertion_micro=None
+    )
+    baseline = await _comparison_experiment(
+        tmp_path / "baseline", case_mean=None, assertion_micro=None
+    )
+
+    result = compare_experiments(candidate, baseline, GateConfig(min_pass_rate=0.5))
+
+    assert result.status == "error"
+    assert any(
+        "min_pass_rate" in reason and "could not be evaluated" in reason
+        for reason in result.reasons
+    )
+    assert "min_pass_rate" in (result.message or "")
+
+
+async def test_compare_min_gate_passes_without_baseline_pass_rate(
+    tmp_path: Path,
+) -> None:
+    candidate = await _comparison_experiment(
+        tmp_path / "candidate", case_mean=0.75, assertion_micro=0.75
+    )
+    baseline = await _comparison_experiment(
+        tmp_path / "baseline", case_mean=None, assertion_micro=None
+    )
+
+    result = compare_experiments(candidate, baseline, GateConfig(min_pass_rate=0.7))
+
+    assert result.comparable
+    assert result.status == "passed"
+    assert result.reasons == ()
+    assert result.delta["pass_rate"] is None
+
+
+async def test_compare_trigger_suite_ignores_max_regression(tmp_path: Path) -> None:
+    candidate = await _comparison_experiment(
+        tmp_path / "candidate",
+        case_mean=0.5,
+        assertion_micro=0.5,
+        suite="trigger",
+    )
+    baseline = await _comparison_experiment(
+        tmp_path / "baseline",
+        case_mean=1.0,
+        assertion_micro=1.0,
+        suite="trigger",
+    )
+
+    result = compare_experiments(candidate, baseline, GateConfig(max_regression=0.1))
+
+    assert result.comparable
+    assert result.delta["pass_rate"] == -0.5
+    assert result.status == "passed"
+    assert not any("regression" in reason for reason in result.reasons)
+
+
+async def test_compare_failed_candidate_experiment_marks_comparison_failed(
+    sample_skill: Path, tmp_path: Path
+) -> None:
+    candidate = await _experiment(
+        sample_skill, tmp_path / "candidate", pass_with_skill=False
+    )
+    baseline = await _experiment(sample_skill, tmp_path / "baseline")
+
+    result = compare_experiments(candidate, baseline)
+
+    assert result.comparable
+    assert result.status == "failed"
+    assert any(
+        "candidate" in reason and "failed" in reason for reason in result.reasons
+    )
+    assert "failed" in (result.message or "")
 
 
 async def test_compare_experiments_regression_above_gate_marks_failed(

@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING
 
 import anyio
 from httpx2 import TransportError
+from pydantic_ai.exceptions import ModelConnectionError
 from pydantic_evals import Case, Dataset
 from pydantic_evals.reporting import EvaluationReportAdapter
 
@@ -427,6 +428,18 @@ async def _run_iterations(
     )
 
 
+def _unavailable_gate_errors(config: ExperimentConfig, *, reason: str) -> list[str]:
+    """Describe configured gates that cannot apply to this experiment's suite."""
+    configured = [("min_pass_rate", config.gates.min_pass_rate is not None)]
+    if config.suite == "output-quality":
+        configured.append(("max_regression", config.gates.max_regression is not None))
+    return [
+        f"{name} gate could not be evaluated because {reason}"
+        for name, enabled in configured
+        if enabled
+    ]
+
+
 def _evaluate_experiment_status(
     config: ExperimentConfig,
     batch: _IterationBatch,
@@ -440,6 +453,11 @@ def _evaluate_experiment_status(
     if not complete or batch.total_errors:
         return "error", errors
     if pass_rate is None:
+        gate_errors = _unavailable_gate_errors(
+            config, reason="the experiment has no graded assertions"
+        )
+        if gate_errors:
+            return "error", gate_errors
         return "ungraded", errors
 
     status: ExperimentStatus = "passed"
@@ -1030,7 +1048,12 @@ async def _run_with_transient_retry(
             await on_retry()
         try:
             return await runner.run(request)
-        except (ConnectionError, TimeoutError, TransportError) as err:
+        except (
+            ConnectionError,
+            TimeoutError,
+            TransportError,
+            ModelConnectionError,
+        ) as err:
             last_error = err
             if attempt == 0:
                 await anyio.sleep(0.1)

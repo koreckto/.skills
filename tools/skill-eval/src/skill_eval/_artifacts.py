@@ -7,7 +7,7 @@ from datetime import UTC, datetime
 from statistics import mean, stdev
 from typing import TYPE_CHECKING, Literal, Never, NotRequired, TypedDict
 
-from skill_eval._helpers import write_json
+from skill_eval._helpers import tail_text, write_json
 
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
@@ -353,7 +353,7 @@ def grading_document(
             )
             continue
         value = bool(result.value)
-        evidence = result.reason or ""
+        evidence = tail_text(result.reason or "")
         if value and not evidence.strip():
             value = False
             evidence = "empty evidence cannot be a PASS"

@@ -1,4 +1,5 @@
 import asyncio
+import json
 import shutil
 from pathlib import Path
 from types import SimpleNamespace
@@ -70,6 +71,25 @@ def _load_then_finish(messages, info):
     )
 
 
+def _load_then_fail(messages, info):
+    if any(
+        isinstance(part, ToolReturnPart)
+        for message in messages
+        for part in getattr(message, "parts", [])
+    ):
+        raise RuntimeError("model failed after tool call")
+    return ModelResponse(
+        parts=[
+            ToolCallPart(
+                "load_capability",
+                {"id": "sample-skill"},
+                tool_call_id="call-load-1",
+            )
+        ],
+        timestamp=FIXED_TIME,
+    )
+
+
 def _request(
     root: Path, sample_skill: Path, *, with_skill: bool, arm: Arm = "with_skill"
 ) -> RunRequest:
@@ -111,6 +131,27 @@ async def test_auto_invocation_records_loaded_skill(
     assert observation.messages_path.is_file()
     assert (tmp_path / "evidence" / "runner.jsonl").is_file()
     assert observation.usage.total_tokens is not None
+
+
+async def test_failed_run_preserves_captured_messages_and_runner_log(
+    sample_skill: Path, tmp_path: Path
+) -> None:
+    runner = PydanticAIRunner(model=FunctionModel(_load_then_fail))
+    request = _request(tmp_path, sample_skill, with_skill=True)
+
+    with pytest.raises(RuntimeError, match="model failed after tool call"):
+        await runner.run(request)
+
+    messages_path = request.raw_evidence_dir / "messages.json"
+    runner_log_path = request.raw_evidence_dir / "runner.jsonl"
+    assert messages_path.is_file()
+    assert runner_log_path.is_file()
+    messages = json.loads(messages_path.read_text(encoding="utf-8"))
+    assert messages
+    assert "load_capability" in messages_path.read_text(encoding="utf-8")
+    runner_log = runner_log_path.read_text(encoding="utf-8")
+    assert '"kind": "skill_load"' in runner_log
+    assert "sample-skill" in runner_log
 
 
 async def test_without_skill_has_no_skill_catalog(
