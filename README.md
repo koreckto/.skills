@@ -8,7 +8,7 @@ Shared [Agent Skills](https://agentskills.io/specification) for use across Korec
 
 | Skill | Version | Description |
 | --- | --- | --- |
-| [python-code-style](skills/python-code-style/SKILL.md) | 1.0.0 | Writes, reviews, formats, and lints Python code against shared style and language standards with Ruff. |
+| [python-code-style](skills/python-code-style/SKILL.md) | 1.1.0 | Writes, reviews, formats, and lints Python code against shared style and language standards with Ruff. |
 
 ## Installation
 

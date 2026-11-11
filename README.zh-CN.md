@@ -8,7 +8,7 @@
 
 | 技能 | 版本 | 描述 |
 | --- | --- | --- |
-| [python-code-style](skills/python-code-style/SKILL.md) | 1.0.0 | 基于共享的代码风格与语言规范，配合 Ruff 编写、审查、格式化和检查 Python 代码。 |
+| [python-code-style](skills/python-code-style/SKILL.md) | 1.1.0 | 基于共享的代码风格与语言规范，配合 Ruff 编写、审查、格式化和检查 Python 代码。 |
 
 ## 安装
 

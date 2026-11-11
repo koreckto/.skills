@@ -1,0 +1,25 @@
+version: 1
+
+trigger:
+  cases:
+    - id: should-trigger
+      prompt: Please trigger the sample skill for this chart task.
+      should_trigger: true
+    - id: should-not-trigger
+      prompt: Explain a JavaScript closure.
+      should_trigger: false
+
+checks:
+  - case: "1"
+    assertion: chart.png exists and is non-empty.
+    type: file_exists
+    path: chart.png
+    non_empty: true
+  - case: "1"
+    assertion: result.json is valid JSON.
+    type: command
+    timeout_seconds: 5
+
+gates:
+  min_pass_rate: 0.5
+  max_regression: 0.25

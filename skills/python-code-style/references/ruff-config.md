@@ -80,7 +80,7 @@ The template intentionally omits `src`. Ruff defaults to `[".", "src"]`, which c
 | `PLC0415` | imports outside the top level | [Style: imports](style-rules.md#imports) |
 | `PLW0603` | `global` statement | [Language: functions and parameters](language-rules.md#functions-and-parameters) |
 | `PT` | pytest style | [Language: testing](language-rules.md#testing) |
-| `PTH` | path handling | [Style: layout](style-rules.md#module-and-package-layout) |
+| `PTH` | path handling | [Language: paths](language-rules.md#paths), [Language: date, time, and I/O](language-rules.md#date-time-and-io) |
 | `RET` | return style | [Language: functions and parameters](language-rules.md#functions-and-parameters) |
 | `RUF` | Ruff-specific rules | [RUF012](language-rules.md#type-annotations), [RUF022](style-rules.md#public-api-and-exports), [RUF100](language-rules.md#suppressions) |
 | `S` | security checks | [Language: security and logging](language-rules.md#security-and-logging), [exceptions](language-rules.md#exceptions), [I/O](language-rules.md#date-time-and-io) |
@@ -103,7 +103,7 @@ The template ignores the following rules on purpose:
 | `D107` | The class docstring covers `__init__`. |
 | `D415` | It accepts only ASCII `.`, `?`, and `!`; non-English punctuation would fail. |
 | `PT009` | It rejects unittest-style `assertEqual`; unittest projects remain valid. |
-| `PT027` | It rejects `unittest.assertRaises`; unittest projects remain valid. |
+| `PT027` | It rejects `TestCase.assertRaises`; unittest projects remain valid. |
 | `RUF001` | It flags ambiguous Unicode in strings; non-English text is allowed. |
 | `RUF002` | It flags ambiguous Unicode in docstrings; non-English text is allowed. |
 | `RUF003` | It flags ambiguous Unicode in comments; non-English text is allowed. |
@@ -163,11 +163,13 @@ ban-relative-imports = "all"  # or "parents"
 
 `PLC0415` flags imports outside the top level; a function-level import for a circular or optional dependency needs `# noqa: PLC0415` with a reason. `E402` keeps module-level imports before other code.
 
+Ruff checks import order and placement, not package-boundary direction. Whether an import uses a target-package `__init__.py` facade or a public object is `Review`; see [Style: public API and exports](style-rules.md#public-api-and-exports).
+
 ## Naming
 
 `N818` is enabled individually; the rest of the `N` family is not. `N806` would conflict with local `UPPER_SNAKE_CASE` constants. `N818` requires custom `Exception` subclasses to end with `Error`; it does not check `BaseException` or `Warning` subclasses. A non-error control-flow exception may suppress `N818` with a reason.
 
-The semantic naming conventions carry `Review` in [Style: naming](style-rules.md#naming).
+The semantic naming conventions carry `Review` in [Style: naming](style-rules.md#naming). This includes defining-boundary analysis for internal objects and distinguishing object-reference callbacks from names required by an external contract.
 
 ## Typing
 
@@ -191,7 +193,9 @@ convention = "google"
 
 `D104`, `D105`, `D107`, and `D415` are ignored globally. `D415` is ignored because it accepts only ASCII `.`, `?`, and `!`; non-English punctuation such as `。` or `？` would fail. Terminal punctuation is `Review`. `D400` and `D401` are disabled by the Google convention, so declarative first lines are allowed.
 
-`D417` checks completeness only when a docstring contains an `Args` section, and it recognizes the English header. Keep section headers in English. Attribute docstrings are not checked by Ruff; per-field docs are preferred for `@dataclass` where tooling reads them, while `Attributes:` is the portable fallback for all three data-class types. Keep one style per project.
+`D417` checks completeness only when a docstring contains an `Args` section, and it recognizes the English header. Keep section headers in English. Attribute docstrings are not checked by Ruff; documenting every public field of a public data model is `Review`. Use a per-field docstring, an `Attributes:` section, or the framework's native field description. Keep one style per project.
+
+Ruff does not enforce separate-line indentation for argument, return, yield, exception, or attribute descriptions; that layout is `Review`. Requiring every applicable section for public functions and methods, reserving summary-only docstrings for internal objects and for unexported functions and methods in modules that are internal relative to the package root, and documenting public model fields are also `Review`.
 
 Docstring content language is determined by the project, not by this configuration.
 
@@ -201,7 +205,7 @@ Docstring content language is determined by the project, not by this configurati
 - `BLE001` allows `except Exception` when the handler logs the exception with its traceback (`exception()` or `exc_info=True`) or re-raises. Because `BLE001` does not recognize a boundary handler that translates an exception into a structured failure return, that handler needs `# noqa: BLE001` with a reason; a logged handler must not add it, because `RUF100` flags an unused `noqa`.
 - `TRY003` is ignored because it rejects multi-word messages at the raise site. `TRY300` moves returns to `else`; `TRY301` moves raises out of a `try` that catches them.
 - `S101` flags `assert` in production code; tests and `conftest.py` ignore it. A genuine internal invariant needs `# noqa: S101` with a reason.
-- `E722` flags bare `except:`; `B904` requires `raise ... from exc` inside an exception handler.
+- `E722` flags bare `except:`; `B904` requires `raise ... from err` inside an exception handler.
 - `TRY400` flags `logger.error` inside an exception handler; use `logger.exception()` or `exc_info=True` when logging the traceback.
 
 ## Security and logging
