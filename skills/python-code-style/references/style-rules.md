@@ -355,7 +355,13 @@ def fetch_users(query: str, *, limit: int = 100) -> list[User]:
 
 - **SHOULD NOT** leave ownerless `TODO` or `FIXME` markers. Include an issue link or an owner. (`Review`)
 
-- **MAY** use a separator comment with a short noun phrase sparingly in a long module, keeping it within the line limit. (`Review`)
+- **MAY** use a separator comment with a short noun phrase to mark a distinct logical section in a long module, using it sparingly and keeping it within the line limit. (`Review`)
+
+  ```python
+  # ==================================================================================
+  # Section topic
+  # ==================================================================================
+  ```
 
 - **MAY** write comments in the project's language. (`Review`)
 

@@ -28,6 +28,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Grouped the style and language references under category headings that follow the writing workflow, moved `Public API and exports` and `Data modeling` into their matching groups, and removed redundant section-level `Applies to` and `Verified by` headers; no rule changes.
 - Moved path handling from module layout to the new `Paths` section and the `Path.open()` rule to Date, time, and I/O; no rule level changes.
 - Moved the naming, comprehension, date/time, path, and testing examples under the rules they illustrate, corrected the pattern-matching, docstring, module-layout, and callback examples, and clarified that a section-level example must share one context; no rule changes.
+- Clarified the section-separator comment rule for long modules with distinct logical sections and documented the three-line banner form.
 
 ## [1.0.0] - 2026-11-09
 
