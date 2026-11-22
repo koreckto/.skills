@@ -22,7 +22,60 @@ These terms classify names and references; [Naming](#naming) decides when an obj
 
 - **MUST** keep import time free of I/O, network calls, global state mutation, and business logic. Isolate framework-required import registration in a dedicated module and document why.
 - **SHOULD** keep module-level code to imports, definitions, constants, type aliases, and the `if __name__ == "__main__":` guard.
-- **SHOULD** order members as: module docstring, imports, constants, type aliases, classes, functions, and the entry guard (dependency order wins when a name is evaluated at import time), keeping public members before internal `_` helpers while dunder methods keep their conventional placement.
+- **SHOULD** order top-level members as: module docstring, imports, public or module-wide constants, type aliases, classes, functions, and the entry guard (dependency order wins when a name is evaluated at import time), keeping public members before internal `_` helpers while placing narrowly scoped internal constants and helpers near their callers and keeping dunder methods in their conventional placement.
+- **SHOULD** keep implementation details—such as regexes, lookup mappings, fixed sets, and local thresholds used by only one function, method, or class—in that narrowest local or class scope rather than hoisting them to module level (Python compiles literal `in {...}` and `in (...)` tests as constant `frozenset`/`tuple` bytecode and caches top-level `re` patterns).
+- **SHOULD** promote a value to a module-level constant only when it is part of the module's public contract, carries independent domain or configuration meaning shared across multiple functions or classes, or avoids non-trivial repeated construction in a measured hot path.
+- **SHOULD** prefix a module-only constant with `_` (`_UPPER_SNAKE_CASE`), and place an internal constant used by only one or two adjacent definitions immediately above its callers rather than hoisting it to the top of the module.
+
+  ```python
+  import re
+
+
+  # Good: single-caller set stays local
+  def is_supported_scheme(scheme: str) -> bool:
+      """Returns whether the URI scheme is supported."""
+      return scheme in {"http", "https"}
+
+
+  # Good: shared internal pattern sits right above its callers
+  _SLUG_PATTERN = re.compile(r"[a-z0-9]+(?:-[a-z0-9]+)*")
+
+
+  def is_valid_slug(value: str) -> bool:
+      """Returns whether the value is a normalized slug."""
+      return _SLUG_PATTERN.fullmatch(value) is not None
+
+
+  def extract_slugs(text: str) -> list[str]:
+      """Extracts all slug tokens from the text."""
+      return _SLUG_PATTERN.findall(text)
+  ```
+
+  ```python
+  import re
+  
+  # Bad: single-caller or narrowly scoped details hoisted and exposed as public module constants
+  SUPPORTED_SCHEMES = {"http", "https"}
+  SLUG_PATTERN = re.compile(r"[a-z0-9]+(?:-[a-z0-9]+)*")
+
+
+  def is_supported_scheme(scheme: str) -> bool:
+      """Returns whether the URI scheme is supported."""
+      return scheme in SUPPORTED_SCHEMES
+
+
+  def is_valid_slug(value: str) -> bool:
+      """Returns whether the value is a normalized slug."""
+      return SLUG_PATTERN.fullmatch(value) is not None
+
+
+  def extract_slugs(text: str) -> list[str]:
+      """Extracts all slug tokens from the text."""
+      return SLUG_PATTERN.findall(text)
+  ```
+
+- **MAY** use a scoped utility module (`utils.py`, `helpers.py`, `_utils.py`, `_helpers.py`, or `common.py`) within a package or subpackage to group small, cohesive shared helpers that do not warrant dedicated modules; do not mechanically reject those module names or fragment a package into single-function files just to avoid them.
+- **SHOULD NOT** turn a utility module into an unbounded, cross-domain dumping ground that mixes unrelated responsibilities or pulls in heavy cross-layer dependencies; extract a domain-named module only when a cohesive responsibility grows large enough to stand on its own.
 
 **Integrated example.**
 
@@ -131,7 +184,7 @@ Ruff checks only `N818` (`Error` suffix on `Exception` subclasses) and builtin s
   ```
 
 - **SHOULD** use full words in public names (lowercase acronyms in `snake_case`, such as `http_client`).
-- **SHOULD** make an object internal by prefixing its name with a single leading underscore when it is used only within its defining boundary: a package outside the project's public API, a module in a public package used only within that package, a function, class, or module global used only in one module, or a method or attribute used only in one class (submodules shared inside an internal package do not need an extra leading underscore).
+- **SHOULD** make an object internal by prefixing its name with a single leading underscore when it is used only within its defining boundary: a package outside the project's public API, a module in a public package used only within that package, a function, class, or module-level constant/global used only in one module (`_UPPER_SNAKE_CASE` for internal constants), or a method or attribute used only in one class (submodules shared inside an internal package do not need an extra leading underscore).
 - **SHOULD** treat names required by public exports, public type signatures, protocols, or name-based framework dispatch as external contracts rather than internal objects.
 - **SHOULD** treat callbacks registered or passed only by object reference as internal to their defining boundary when their Python names are not external contracts.
 
@@ -154,7 +207,7 @@ Ruff checks only `N818` (`Error` suffix on `Exception` subclasses) and builtin s
   cache_flag: bool = True
   ```
 
-- **SHOULD NOT** use `utils`, `helpers`, or `common` as dumping-ground module names, or `__name` for privacy (double underscores trigger name mangling); **MAY** use `_` for an intentionally unused value.
+- **SHOULD NOT** use `__name` for privacy (double underscores trigger name mangling); **MAY** use `_` for an intentionally unused value.
 
 ### Formatting and line structure
 
